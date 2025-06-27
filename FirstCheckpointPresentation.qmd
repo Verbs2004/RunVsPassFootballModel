@@ -3,7 +3,7 @@ title: "Run or Pass?"
 author: "Verity and Cale"
 format:
   revealjs:
-    theme: simple
+    theme: EDA_theme.scss
     chalkboard: true
     smaller: true
     slide-number: c/t
@@ -13,16 +13,19 @@ format:
       method: mathjax
 ---
 
-## Quarto
+## Predicting Offensive Play Calls in the NFL
 
-Quarto enables you to weave together content and executable code into a finished presentation. To learn more about Quarto presentations see <https://quarto.org/docs/presentations/>.
+* Accurately anticipating a run or passing play is vital for defensive play-calling
 
-## Bullets
+* The game is won through strategy
 
-When you click the **Render** button a document will be generated that includes:
+* Players put in the right circumstances will perform better
 
--   Content authored with markdown
--   Output from executable code
+## Data
+
+* Play-by-play and tracking data from the first 9 weeks of the 2021 season
+  <ul>
+      <li class="fragment">Quarter, down, distance, time, yard line, etc.</li>
 
 ## Code
 
