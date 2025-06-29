@@ -190,8 +190,42 @@ Score differential from possession team’s POV
 <section id="run-proportions-vary-widely-for-different-teams" class="slide level2">
 <h2>Run proportions vary widely for different teams</h2>
 
-
 <img data-src="FirstCheckpointPresentation_files/figure-revealjs/unnamed-chunk-1-1.png" width="960" class="r-stretch"></section>
+<section id="down-and-distance-are-major-tells-of-what-a-team-will-do" class="slide level2">
+<h2>Down and distance are major tells of what a team will do</h2>
+
+<img data-src="FirstCheckpointPresentation_files/figure-revealjs/unnamed-chunk-2-1.png" width="960" class="r-stretch"></section>
+<section id="modeling" class="slide level2">
+<h2>Modeling</h2>
+<ul>
+<li>We first created a basic model using only info a coach can have before the play
+<ul>
+<li class="fragment">
+Quarter, down, distance, time left, opposing team, score differential, yard line
+</li>
+</ul></li>
+</ul>
+<div class="fragment">
+<ul>
+<li>Model trained on weeks 1-5, tested on weeks 6-9
+<ul>
+<li class="fragment">
+<strong>Accuracy</strong>: 72.1%
+</li>
+<li class="fragment">
+<strong>AUC</strong>: 0.8085
+</li>
+</ul></li>
+</ul>
+</div>
+<div class="fragment">
+<ul>
+<li>These features reflect the actual decision-making context coaches face in real time.<br>
+By focusing on pre-snap variables, the model helps identify patterns in playcalling strategy, making it well-suited for evaluating tendencies and building opponent scouting tools.</li>
+</ul>
+
+</div>
+</section>
     </div>
   <div class="quarto-auto-generated-content" style="display: none;">
 <div class="footer footer-default">

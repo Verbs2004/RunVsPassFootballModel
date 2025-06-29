@@ -50,35 +50,176 @@ format:
 
 team_props <- data.frame(
   team = c("ARI", "ATL", "BAL", "BUF", "CAR", "CHI", "CIN", "CLE", "DAL", "DEN", "DET", "GB", "HOU", "IND", "JAX", "KC", "LA", "LAC", "LV", "MIA", "MIN", "NE", "NO", "NYG", "NYJ", "PHI", "PIT", "SEA", "SF", "TB", "TEN", "WAS"),
-  offense_run_prop = c(0.3620387, 0.5636008, 0.4719536, 0.3582090, 0.4170306, 0.5823529, 0.3539020, 0.4921875, 0.4547461, 0.4000000, 0.4166667, 0.3890909, 0.3958333, 0.3559028, 0.4383057, 0.3339658, 0.3390558, 0.3286573, 0.3496802, 0.3539652, 0.3581781, 0.4526515, 0.4010889, 0.4925373, 0.3768382, 0.4911243, 0.3695198, 0.4121475, 0.4405286, 0.2994652, 0.5476190, 0.3943662),
-  defense_run_prop = c(0.3813084, 0.3693380, 0.3377111, 0.4008909, 0.4460432, 0.4909457, 0.4363296, 0.4276316, 0.4397463, 0.3844581, 0.4198783, 0.4958848, 0.4887526, 0.4533333, 0.4105461, 0.3508065, 0.3995536, 0.4123932, 0.4210526, 0.3921201, 0.4024641, 0.3974592, 0.4233716, 0.4000000, 0.4050179, 0.3721414, 0.4086444, 0.4246824, 0.4195122, 0.4121996, 0.3105590, 0.4155598)
+  offense_run_prop = c(
+    0.3409490, 0.5459883, 0.4584139, 0.3347548, 0.4082969, 0.5352941,
+    0.3520871, 0.4785156, 0.4701987, 0.3877551, 0.4104167, 0.3854545,
+    0.3958333, 0.3420139, 0.4272560, 0.3074004, 0.3476395, 0.3186373,
+    0.3432836, 0.3500967, 0.3581781, 0.4450758, 0.3992740, 0.4669510,
+    0.3694853, 0.4674556, 0.3465553, 0.4034707, 0.4317181, 0.3065954,
+    0.5476190, 0.3697183
+  ),
+  defense_run_prop = c(
+    0.3700935, 0.3641115, 0.3227017, 0.3697105, 0.4532374, 0.4688129,
+    0.4250936, 0.4320175, 0.4291755, 0.3721881, 0.4036511, 0.4897119,
+    0.4846626, 0.4495238, 0.3992467, 0.3447581, 0.3928571, 0.4123932,
+    0.4089069, 0.3677298, 0.3737166, 0.3938294, 0.4157088, 0.3775281,
+    0.3978495, 0.3492723, 0.3968566, 0.4137931, 0.4219512, 0.4066543,
+    0.2898551, 0.4022770
+  )
 )
 
 library(ggplot2)
 library(ggrepel)
 library(scales)
+library(dplyr)
 
-x_limits <- c(min(team_props$offense_run_prop) * 0.975, max(team_props$offense_run_prop) * 1.025)
-y_limits <- c(min(team_props$defense_run_prop) * 0.975, max(team_props$defense_run_prop) * 1.025)
+team_props <- team_props |>
+  mutate(
+    nudge_x = ifelse(team == "SEA", 0.007, 0),
+    nudge_y = ifelse(team == "SEA", 0.007, 0)
+  )
 
 ggplot(team_props, aes(x = offense_run_prop, y = defense_run_prop)) +
-  geom_point(color = "midnightblue", size = 2) +
-  ggrepel::geom_text_repel(aes(label = team), size = 5, max.overlaps = 30) +
-  scale_x_continuous(labels = scales::percent_format(accuracy = 1), limits = x_limits) +
-  scale_y_continuous(labels = scales::percent_format(accuracy = 1), limits = y_limits) +
+  geom_point(color = "midnightblue") +
+  ggrepel::geom_text_repel(
+    aes(label = team),
+    size = 5,
+    max.overlaps = 40,
+    nudge_x = team_props$nudge_x,
+    nudge_y = team_props$nudge_y,
+    seed = 41
+  ) +geom_hline(yintercept = mean(team_props$defense_run_prop), linetype = "dashed", color = "gray60") +
+  geom_vline(xintercept = mean(team_props$offense_run_prop), linetype = "dashed", color = "gray60") +
+  scale_x_continuous(
+    labels = scales::percent_format(accuracy = 1),
+    limits = c(0.3, 0.55),
+    name = "Offensive Run Rate"
+  ) +
+  scale_y_continuous(
+    labels = scales::percent_format(accuracy = 1),
+    limits = c(0.3, 0.55),
+    name = "Defensive Run Rate Faced"
+  ) +
   labs(
-    title = "Run Proportions: Offense vs Defense",
-    x = "Offense Run Rate",
-    y = "Defense Run Rate"
+    subtitle = "Dashed lines represent league average",
+    x = "Offensive Run Rate",
+    y = "Defensive Run Rate Faced"
   ) +
   theme_minimal(base_size = 16) +
   theme(
-    axis.title.x = element_text(face = "bold"),
-    axis.title.y = element_text(face = "bold"),
-    plot.title = element_text(face = "bold", hjust = 0.5)
+    plot.subtitle = element_text(hjust = 0.5),
+    axis.title = element_text(face = "bold"),
+    axis.text = element_text(color = "black")
   )
 
 ```
 
-## 
+## Down and distance are major tells of what a team will do
+
+```{r}
+
+library(dplyr)
+library(ggplot2)
+library(viridis)
+library(scales)
+
+# Load your data
+plays <- read.csv("plays.csv")
+player_play <- read.csv("player_play.csv")
+games <- read.csv("games.csv")
+
+# Bin yardsToGo into categories
+plays <- plays %>%
+  mutate(
+    ytg_bin = case_when(
+      yardsToGo <= 1 ~ "Short (0-1)",
+      yardsToGo <= 3 ~ "Short (2-3)",
+      yardsToGo <= 6 ~ "Medium (4-6)",
+      yardsToGo <= 10 ~ "Medium (7-10)",
+      yardsToGo <= 20 ~ "Long (11-20)",
+      TRUE ~ "Very Long (21+)"
+    ),
+    down = factor(down, levels = 1:4),
+    ytg_bin = factor(ytg_bin, levels = c("Short (0-1)", "Short (2-3)", "Medium (4-6)", "Medium (7-10)", "Long (11-20)", "Very Long (21+)"))
+  )
+
+# Identify scrambles (exclude these as runs)
+scrambles <- plays %>%
+  filter(dropbackType == "SCRAMBLE", passResult == "R") %>%
+  select(gameId, playId) %>%
+  mutate(is_scramble = TRUE)
+
+# Identify run plays (hadRushAttempt = 1, exclude scrambles)
+run_plays <- player_play %>%
+  filter(hadRushAttempt == 1) %>%
+  select(gameId, playId) %>%
+  left_join(scrambles, by = c("gameId", "playId")) %>%
+  filter(is.na(is_scramble)) %>%
+  mutate(is_run = 1)
+
+# Join run info back to plays, mark non-run plays with 0
+plays <- plays %>%
+  left_join(run_plays %>% select(gameId, playId, is_run), by = c("gameId", "playId")) %>%
+  mutate(is_run = ifelse(is.na(is_run), 0, is_run))
+
+# Calculate run proportions by down and ytg_bin
+run_props <- plays %>%
+  filter(!is.na(down), !is.na(ytg_bin)) %>%
+  group_by(down, ytg_bin) %>%
+  summarise(
+    total_plays = n(),
+    run_plays = sum(is_run),
+    run_prop = run_plays / total_plays,
+    .groups = "drop"
+  )
+
+# Plot heatmap with viridis color scale
+ggplot(run_props, aes(x = down, y = ytg_bin, fill = run_prop)) +
+  geom_tile(color = "grey90", linewidth = 0.3) +
+  geom_text(aes(label = percent(run_prop, accuracy = 1)), color = "black", size = 4) +
+  scale_fill_viridis_c(
+    option = "D",
+    direction = -1,
+    limits = c(0, 1),
+    labels = percent_format(accuracy = 1),
+    name = "Run Probability"
+  ) +
+  labs(
+    subtitle = "Binned yards to go categories",
+    x = "Down",
+    y = "Yards to Go"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    panel.grid = element_blank(),
+    plot.title = element_text(face = "bold", hjust = 0.5, size = 18),
+    plot.subtitle = element_text(hjust = 0.5, size = 13),
+    axis.text = element_text(color = "black"),
+    legend.title = element_text(face = "bold"),
+    legend.text = element_text(size = 10)
+  )
+
+
+```
+
+## Modeling
+
+* We first created a basic model using only info a coach can have before the play
+  <ul>
+        <li class="fragment">Quarter, down, distance, time left, opposing team, score differential, yard line</li>
+  </ul>
+
+. . . 
+
+* Model trained on weeks 1-5, tested on weeks 6-9
+<ul>
+        <li class="fragment">**Accuracy**: 72.1%</li>
+        <li class="fragment">**AUC**: 0.8085</li>
+  </ul>
+
+. . . 
+
+* These features reflect the actual decision-making context coaches face in real time.  
+By focusing on pre-snap variables, the model helps identify patterns in playcalling strategy, making it well-suited for evaluating tendencies and building opponent scouting tools.
+
 
