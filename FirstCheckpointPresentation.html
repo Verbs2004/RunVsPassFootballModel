@@ -152,7 +152,7 @@ Verity and Cale
 </div>
 <div class="fragment">
 <ul>
-<li>Our goal is to build a model that predicts the likelihood of a run play given presnap context</li>
+<li>Our goal is to build a model that predicts the likelihood of a run play given pre-snap context</li>
 </ul>
 </div>
 </section>
@@ -175,24 +175,24 @@ Key variables: quarter, down, distance, game clock, yard line, etc.
 <ul>
 <li>Created features:
 <ul>
-<li class="fragment">
+<li>
 Situational run rate
 </li>
-<li class="fragment">
+<li>
 Yardline relative to the offense
 </li>
-<li class="fragment">
+<li>
 Score differential from possession team’s POV
 </li>
 </ul>
 </li></ul></div>
 </section>
-<section id="run-proportions-vary-widely-for-different-teams" class="slide level2">
-<h2>Run proportions vary widely for different teams</h2>
+<section id="down-and-distance-are-major-tells-of-what-an-offense-will-do" class="slide level2">
+<h2>Down and distance are major tells of what an offense will do</h2>
 
 <img data-src="FirstCheckpointPresentation_files/figure-revealjs/unnamed-chunk-1-1.png" width="960" class="r-stretch"></section>
-<section id="down-and-distance-are-major-tells-of-what-a-team-will-do" class="slide level2">
-<h2>Down and distance are major tells of what a team will do</h2>
+<section id="run-proportions-vary-widely-for-different-teams" class="slide level2">
+<h2>Run proportions vary widely for different teams</h2>
 
 <img data-src="FirstCheckpointPresentation_files/figure-revealjs/unnamed-chunk-2-1.png" width="960" class="r-stretch"></section>
 <section id="modeling" class="slide level2">
@@ -203,25 +203,69 @@ Score differential from possession team’s POV
 <li class="fragment">
 Quarter, down, distance, time left, opposing team, score differential, yard line
 </li>
+<li class="fragment">
+Offensive and defensive run proportions, situational run proportions
+</li>
 </ul></li>
 </ul>
 <div class="fragment">
 <ul>
 <li>Model trained on weeks 1-5, tested on weeks 6-9
 <ul>
-<li class="fragment">
-<strong>Accuracy</strong>: 72.1%
+<li>
+Accuracy: <strong>72.1%</strong>
 </li>
-<li class="fragment">
-<strong>AUC</strong>: 0.8085
+<li>
+AUC: <strong>0.8085</strong>
 </li>
 </ul></li>
 </ul>
 </div>
 <div class="fragment">
 <ul>
-<li>These features reflect the actual decision-making context coaches face in real time.<br>
-By focusing on pre-snap variables, the model helps identify patterns in playcalling strategy, making it well-suited for evaluating tendencies and building opponent scouting tools.</li>
+<li>How is this useful?
+<ul>
+<li class="fragment">
+Variables are known before sending players on the field
+</li>
+<li class="fragment">
+Can be built upon
+</li>
+</ul></li>
+</ul>
+</div>
+</section>
+<section id="whats-next" class="slide level2">
+<h2>What’s Next?</h2>
+<ul>
+<li>Including offensive personnel</li>
+</ul>
+<div class="fragment">
+<ul>
+<li>Win probabilities</li>
+</ul>
+</div>
+<div class="fragment">
+<ul>
+<li>Tracking data
+<ul>
+<li>
+Tells us what players are on the field and where they are
+</li>
+<li>
+Formations, linemen splits, motions
+</li>
+</ul></li>
+</ul>
+</div>
+<div class="fragment">
+<ul>
+<li>Performance of players in the game before that play</li>
+</ul>
+</div>
+<div class="fragment">
+<ul>
+<li>We have the basic model, now we can build on it</li>
 </ul>
 
 </div>
