@@ -56,6 +56,10 @@ run_plays <- player_play |>
   filter(is.na(is_scramble)) |>
   mutate(is_run = 1)
 
+plays <- plays |>
+  left_join(run_plays, by = c("gameId", "playId")) |>
+  mutate(is_run = ifelse(is.na(is_run), 0, is_run))
+
 # --- Team Run % ---
 offense_run_props <- plays |>
   group_by(possessionTeam) |>
@@ -104,60 +108,6 @@ model_data <- model_data |>
 model_data <- model_data |>
   left_join(games |> select(gameId, week), by = "gameId")
 
-# --- Specific Training Data ---
-# train_data <- model_data |> filter(week <= 5)
-# test_data  <- model_data |> filter(week >= 6)
-# 
-# ltrain_data <- train_data |>
-#   filter(!is.na(gameClock), !is.na(down), !is.na(yardsToGo)) |>
-#   mutate(
-#     clock_str = str_sub(as.character(gameClock), 1, 5),
-#     clock_seconds = as.numeric(ms(clock_str)),
-#     quarter = factor(quarter),
-#     score_diff = case_when(
-#       possessionTeam == homeTeamAbbr ~ preSnapHomeScore - preSnapVisitorScore,
-#       possessionTeam == visitorTeamAbbr ~ preSnapVisitorScore - preSnapHomeScore,
-#       TRUE ~ NA_real_),
-#     yardline = ifelse(possessionTeam == yardlineSide | yardlineNumber == 50, yardlineNumber, 100 - yardlineNumber)
-#   ) |>
-#   select(is_run, quarter, down, yardsToGo, clock_seconds, score_diff, yardline,
-#          offense_run_prop, defense_run_prop, team_situational_run_prop)
-# 
-# run_model <- glm(
-#   is_run ~ quarter + down + yardsToGo + clock_seconds + score_diff + yardline + 
-#     offense_run_prop + defense_run_prop + team_situational_run_prop,
-#   data = ltrain_data,
-#   family = binomial()
-# )
-# 
-# ltest_data <- test_data |>
-#   filter(!is.na(gameClock), !is.na(down), !is.na(yardsToGo)) |>
-#   mutate(
-#     clock_str = str_sub(as.character(gameClock), 1, 5),
-#     clock_seconds = as.numeric(ms(clock_str)),
-#     quarter = factor(quarter, levels = levels(ltrain_data$quarter)),  # ensure consistent levels
-#     score_diff = case_when(
-#       possessionTeam == homeTeamAbbr ~ preSnapHomeScore - preSnapVisitorScore,
-#       possessionTeam == visitorTeamAbbr ~ preSnapVisitorScore - preSnapHomeScore,
-#       TRUE ~ NA_real_),
-#     yardline = ifelse(possessionTeam == yardlineSide | yardlineNumber == 50, yardlineNumber, 100 - yardlineNumber)
-#   ) |>
-#   select(is_run, quarter, down, yardsToGo, clock_seconds, score_diff, yardline,
-#          offense_run_prop, defense_run_prop, team_situational_run_prop)
-# 
-# ltest_data <- ltest_data |>
-#   mutate(
-#     pred_run_prob = predict(run_model, newdata = ltest_data, type = "response"),
-#     pred_run_binary = ifelse(pred_run_prob > 0.5, 1, 0)
-#   )
-# 
-# # Accuracy
-# mean(ltest_data$pred_run_binary == ltest_data$is_run)
-# 
-# # AUC
-# library(pROC)
-# roc(ltest_data$is_run, ltest_data$pred_run_prob)$auc
-
 # --- Add Situational Run Props ---
 team_situational_run_props <- plays |>
   filter(!is.na(quarter), !is.na(down), !is.na(yardsToGo)) |>
@@ -184,13 +134,15 @@ model_data <- model_data |>
             by = c("possessionTeam", "quarter", "down", "ytg_bin")) |>
   rename(team_situational_run_prop = run_prop)
 
-# --- Final Model Dataset ---
-lmodel_data <- model_data |>
+# --- Specific Training Data ---
+train_data <- model_data |> filter(week <= 5)
+test_data  <- model_data |> filter(week >= 6)
+
+ltrain_data <- train_data |>
   filter(!is.na(gameClock), !is.na(down), !is.na(yardsToGo)) |>
   mutate(
     clock_str = str_sub(as.character(gameClock), 1, 5),
     clock_seconds = as.numeric(ms(clock_str)),
-    minute_remaining = floor(clock_seconds / 60),
     quarter = factor(quarter),
     score_diff = case_when(
       possessionTeam == homeTeamAbbr ~ preSnapHomeScore - preSnapVisitorScore,
@@ -198,48 +150,59 @@ lmodel_data <- model_data |>
       TRUE ~ NA_real_),
     yardline = ifelse(possessionTeam == yardlineSide | yardlineNumber == 50, yardlineNumber, 100 - yardlineNumber)
   ) |>
-  select(is_run, quarter, down, yardsToGo, clock_seconds, score_diff, yardline, offense_run_prop, defense_run_prop,
-         team_situational_run_prop)
+  select(is_run, quarter, down, yardsToGo, clock_seconds, score_diff, yardline,
+        offense_run_prop, defense_run_prop, team_situational_run_prop)
 
-# --- Build Model ---
 run_model <- glm(
-  is_run ~ quarter + down + yardsToGo + clock_seconds + score_diff + yardline + offense_run_prop + defense_run_prop
-  + team_situational_run_prop,
-  data = lmodel_data,
+  is_run ~ quarter + down + yardsToGo + clock_seconds + score_diff + yardline +
+    offense_run_prop + defense_run_prop + team_situational_run_prop,
+  data = ltrain_data,
   family = binomial()
 )
 
-tidy(run_model)
-tidy(run_model, conf.int = TRUE, exponentiate = TRUE)
-
-# --- Add Predictions ---
-lmodel_data <- lmodel_data |>
+ltest_data <- test_data |>
+  filter(!is.na(gameClock), !is.na(down), !is.na(yardsToGo)) |>
   mutate(
-    pred_run_prob = predict(run_model, type = "response"),
-    pred_run_class = ifelse(pred_run_prob > 0.5, "Run", "Pass"),
+    clock_str = str_sub(as.character(gameClock), 1, 5),
+    clock_seconds = as.numeric(ms(clock_str)),
+    quarter = factor(quarter, levels = levels(ltrain_data$quarter)),  # ensure consistent levels
+    score_diff = case_when(
+      possessionTeam == homeTeamAbbr ~ preSnapHomeScore - preSnapVisitorScore,
+      possessionTeam == visitorTeamAbbr ~ preSnapVisitorScore - preSnapHomeScore,
+      TRUE ~ NA_real_),
+    yardline = ifelse(possessionTeam == yardlineSide | yardlineNumber == 50, yardlineNumber, 100 - yardlineNumber)
+  ) |>
+  select(is_run, quarter, down, yardsToGo, clock_seconds, score_diff, yardline,
+          offense_run_prop, defense_run_prop, team_situational_run_prop)
+
+ltest_data <- ltest_data |>
+  mutate(
+    pred_run_prob = predict(run_model, newdata = ltest_data, type = "response"),
     pred_run_binary = ifelse(pred_run_prob > 0.5, 1, 0)
-  )
+    )
 
-# --- Evaluation Metrics ---
-accuracy <- mean(lmodel_data$pred_run_binary == lmodel_data$is_run)
-misclass_rate <- mean(lmodel_data$pred_run_binary != lmodel_data$is_run)
-brier_score <- mean((lmodel_data$pred_run_binary - lmodel_data$pred_run_prob)^2)
+mean(ltest_data$pred_run_binary == ltest_data$is_run)
+library(pROC)
+roc(ltest_data$is_run, ltest_data$pred_run_prob)$auc
 
-accuracy
-misclass_rate
-brier_score
+# --- Evaluation Metrics (on test set) ---
+accuracy <- mean(ltest_data$pred_run_binary == ltest_data$is_run)
+misclass_rate <- mean(ltest_data$pred_run_binary != ltest_data$is_run)
+brier_score <- mean((ltest_data$pred_run_prob - ltest_data$is_run)^2)
 
+print(accuracy)
+print(misclass_rate)
+print(brier_score)
+
+# --- Confusion Matrix (on test set) ---
 table(
-  Predicted = factor(ifelse(lmodel_data$pred_run_binary == 1, "Run", "Pass"), levels = c("Run", "Pass")),
-  Actual = factor(ifelse(lmodel_data$is_run == 1, "Run", "Pass"), levels = c("Run", "Pass"))
+  Predicted = factor(ifelse(ltest_data$pred_run_binary == 1, "Run", "Pass"), levels = c("Run", "Pass")),
+  Actual = factor(ifelse(ltest_data$is_run == 1, "Run", "Pass"), levels = c("Run", "Pass"))
 )
 
-# --- ROC Curve ---
-lmodel_data <- lmodel_data |>
-  mutate(pred_prob = predict(run_model, type = "response"))
-
-run_roc <- roc(lmodel_data$is_run, lmodel_data$pred_prob)
-run_roc$auc
+# --- ROC Curve (on test set) ---
+run_roc <- roc(ltest_data$is_run, ltest_data$pred_run_prob)
+print(run_roc$auc)
 
 roc_df <- tibble(
   threshold = run_roc$thresholds,
@@ -257,13 +220,8 @@ ggplot(roc_df, aes(x = 1 - specificity, y = sensitivity)) +
   ) +
   theme_minimal()
 
-# --- Calibration Plot ---
-lmodel_data |>
-  mutate(
-    pred = predict(run_model, type = "response"),
-    obs = is_run
-  ) |>
-  ggplot(aes(x = pred, y = obs)) +
+# --- Calibration Plot (on test set) ---
+ggplot(ltest_data, aes(x = pred_run_prob, y = is_run)) +
   geom_point(alpha = 0.3) +
   geom_smooth(method = "loess", se = FALSE, color = "blue") +
   geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") +
@@ -274,11 +232,7 @@ lmodel_data |>
   ) +
   theme_minimal()
 
-# --- Shiny App ---
-library(shiny)
-library(lubridate)
-
-# UI
+# --- Shiny App: Run Play Probability Predictor ---
 ui <- fluidPage(
   titlePanel("Run Play Probability Predictor"),
   
@@ -303,22 +257,28 @@ ui <- fluidPage(
   )
 )
 
-# Server
 server <- function(input, output) {
   output$run_prob <- renderPrint({
+    # Convert MM:SS to seconds
     clock_seconds <- as.numeric(ms(input$clock))
     
+    # Get offensive team run prop
     off_prop <- offense_run_props |>
       filter(possessionTeam == input$off_team) |>
       pull(team_run_prop)
+    if (length(off_prop) == 0) {
+      off_prop <- mean(offense_run_props$team_run_prop, na.rm = TRUE)
+    }
     
+    # Get defensive team run prop
     def_prop <- defense_run_props |>
       filter(defensiveTeam == input$def_team) |>
       pull(defense_run_prop)
+    if (length(def_prop) == 0) {
+      def_prop <- mean(defense_run_props$defense_run_prop, na.rm = TRUE)
+    }
     
-    if (length(off_prop) == 0) off_prop <- mean(offense_run_props$team_run_prop, na.rm = TRUE)
-    if (length(def_prop) == 0) def_prop <- mean(defense_run_props$defense_run_prop, na.rm = TRUE)
-    
+    # Categorize YTG
     ytg_bin_input <- case_when(
       input$yardsToGo <= 1 ~ "Short (0-1)",
       input$yardsToGo <= 3 ~ "Short (2-3)",
@@ -328,6 +288,7 @@ server <- function(input, output) {
       TRUE ~ "Very Long (21+)"
     )
     
+    # Get team situational run prop
     situational_prop <- team_situational_run_props |>
       filter(
         possessionTeam == input$off_team,
@@ -336,13 +297,13 @@ server <- function(input, output) {
         ytg_bin == ytg_bin_input
       ) |>
       pull(run_prop)
-    
     if (length(situational_prop) == 0) {
       situational_prop <- mean(team_situational_run_props$run_prop, na.rm = TRUE)
     }
     
-    new_data <- data.frame(
-      quarter = factor(input$quarter, levels = levels(lmodel_data$quarter)),
+    # Format prediction input
+    new_data <- tibble(
+      quarter = factor(input$quarter, levels = levels(ltrain_data$quarter)),
       down = input$down,
       yardsToGo = input$yardsToGo,
       clock_seconds = clock_seconds,
@@ -353,25 +314,27 @@ server <- function(input, output) {
       team_situational_run_prop = situational_prop
     )
     
+    # Predict using trained model (weeks 1–5)
     prob <- predict(run_model, newdata = new_data, type = "response")
-    cat(sprintf("%.1f%%", prob * 100))
+    cat(sprintf("Estimated Run Probability: %.1f%%", prob * 100))
   })
+  
   output$field_plot <- renderPlot({
     los <- input$yardline + 10
     first_down <- los + input$yardsToGo
     
     plot <- field_background +
-      geom_vline(xintercept = los, color = "blue", linewidth = 1) +
-      labs(title = "Line of Scrimmage (Blue) and First Down Line (Yellow)") +
+      geom_vline(xintercept = los, color = "blue", linewidth = 1.2) +
+      labs(title = "Field View: LOS (Blue) and First Down (Yellow)") +
       theme_void()
     
     if (first_down < 110) {
-      plot <- plot + geom_vline(xintercept = first_down, color = "yellow", linewidth = 1)
+      plot <- plot + geom_vline(xintercept = first_down, color = "yellow", linewidth = 1.2)
     }
     
     plot
   })
 }
 
-# Run the app
+# Run App
 shinyApp(ui = ui, server = server)

@@ -17,18 +17,68 @@ format:
 
 * Accurately anticipating a run or passing play is vital for defensive play-calling
 
+. . . 
+
 * The game is won through strategy
 
-* Players put in the right circumstances will perform better
+. . . 
+
+* Our goal is to build a model that predicts the likelihood of a run play given presnap context
 
 ## Data
 
 * Play-by-play and tracking data from the first 9 weeks of the 2021 season
+
+. . . 
+
+* So far we have only used the basic plays data
   <ul>
-      <li class="fragment">Quarter, down, distance, time, yard line, etc.</li>
+      <li class="fragment">Key variables: quarter, down, distance, game clock, yard line, etc.</li>
+  </ul>
 
-## Code
+. . . 
 
-When you click the **Render** button a presentation will be generated that includes both content and the output of embedded code. You can embed code like this:
+* Created features:
+  <ul>
+      <li class="fragment">Situational run rate</li>
+      <li class="fragment">Yardline relative to the offense</li>
+      <li class="fragment">Score differential from possession team's POV</li>
+
+## Run proportions vary widely for different teams
 
 ```{r}
+
+team_props <- data.frame(
+  team = c("ARI", "ATL", "BAL", "BUF", "CAR", "CHI", "CIN", "CLE", "DAL", "DEN", "DET", "GB", "HOU", "IND", "JAX", "KC", "LA", "LAC", "LV", "MIA", "MIN", "NE", "NO", "NYG", "NYJ", "PHI", "PIT", "SEA", "SF", "TB", "TEN", "WAS"),
+  offense_run_prop = c(0.3620387, 0.5636008, 0.4719536, 0.3582090, 0.4170306, 0.5823529, 0.3539020, 0.4921875, 0.4547461, 0.4000000, 0.4166667, 0.3890909, 0.3958333, 0.3559028, 0.4383057, 0.3339658, 0.3390558, 0.3286573, 0.3496802, 0.3539652, 0.3581781, 0.4526515, 0.4010889, 0.4925373, 0.3768382, 0.4911243, 0.3695198, 0.4121475, 0.4405286, 0.2994652, 0.5476190, 0.3943662),
+  defense_run_prop = c(0.3813084, 0.3693380, 0.3377111, 0.4008909, 0.4460432, 0.4909457, 0.4363296, 0.4276316, 0.4397463, 0.3844581, 0.4198783, 0.4958848, 0.4887526, 0.4533333, 0.4105461, 0.3508065, 0.3995536, 0.4123932, 0.4210526, 0.3921201, 0.4024641, 0.3974592, 0.4233716, 0.4000000, 0.4050179, 0.3721414, 0.4086444, 0.4246824, 0.4195122, 0.4121996, 0.3105590, 0.4155598)
+)
+
+library(ggplot2)
+library(ggrepel)
+library(scales)
+
+x_limits <- c(min(team_props$offense_run_prop) * 0.975, max(team_props$offense_run_prop) * 1.025)
+y_limits <- c(min(team_props$defense_run_prop) * 0.975, max(team_props$defense_run_prop) * 1.025)
+
+ggplot(team_props, aes(x = offense_run_prop, y = defense_run_prop)) +
+  geom_point(color = "midnightblue", size = 2) +
+  ggrepel::geom_text_repel(aes(label = team), size = 5, max.overlaps = 30) +
+  scale_x_continuous(labels = scales::percent_format(accuracy = 1), limits = x_limits) +
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1), limits = y_limits) +
+  labs(
+    title = "Run Proportions: Offense vs Defense",
+    x = "Offense Run Rate",
+    y = "Defense Run Rate"
+  ) +
+  theme_minimal(base_size = 16) +
+  theme(
+    axis.title.x = element_text(face = "bold"),
+    axis.title.y = element_text(face = "bold"),
+    plot.title = element_text(face = "bold", hjust = 0.5)
+  )
+
+```
+
+## 
+

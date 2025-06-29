@@ -143,26 +143,55 @@ Verity and Cale
 <section id="predicting-offensive-play-calls-in-the-nfl" class="slide level2">
 <h2>Predicting Offensive Play Calls in the NFL</h2>
 <ul>
-<li><p>Accurately anticipating a run or passing play is vital for defensive play-calling</p></li>
-<li><p>The game is won through strategy</p></li>
-<li><p>Players put in the right circumstances will perform better</p></li>
+<li>Accurately anticipating a run or passing play is vital for defensive play-calling</li>
 </ul>
+<div class="fragment">
+<ul>
+<li>The game is won through strategy</li>
+</ul>
+</div>
+<div class="fragment">
+<ul>
+<li>Our goal is to build a model that predicts the likelihood of a run play given presnap context</li>
+</ul>
+</div>
 </section>
 <section id="data" class="slide level2">
 <h2>Data</h2>
 <ul>
-<li>Play-by-play and tracking data from the first 9 weeks of the 2021 season
+<li>Play-by-play and tracking data from the first 9 weeks of the 2021 season</li>
+</ul>
+<div class="fragment">
+<ul>
+<li>So far we have only used the basic plays data
 <ul>
 <li class="fragment">
-Quarter, down, distance, time, yard line, etc.
+Key variables: quarter, down, distance, game clock, yard line, etc.
+</li>
+</ul></li>
+</ul>
+</div>
+<div class="fragment">
+<ul>
+<li>Created features:
+<ul>
+<li class="fragment">
+Situational run rate
+</li>
+<li class="fragment">
+Yardline relative to the offense
+</li>
+<li class="fragment">
+Score differential from possession team’s POV
 </li>
 </ul>
-</li></ul></section>
-<section id="code" class="slide level2">
-<h2>Code</h2>
-<p>When you click the <strong>Render</strong> button a presentation will be generated that includes both content and the output of embedded code. You can embed code like this:</p>
-
+</li></ul></div>
 </section>
+<section id="run-proportions-vary-widely-for-different-teams" class="slide level2">
+<h2>Run proportions vary widely for different teams</h2>
+
+
+<img data-src="FirstCheckpointPresentation_files/figure-revealjs/unnamed-chunk-1-1.png" width="960" class="r-stretch"></section>
     </div>
   <div class="quarto-auto-generated-content" style="display: none;">
 <div class="footer footer-default">
@@ -380,6 +409,44 @@ Quarter, down, distance, time, yard line, etc.
         ]
       });
     </script>
+    
+    <script>
+      // htmlwidgets need to know to resize themselves when slides are shown/hidden.
+      // Fire the "slideenter" event (handled by htmlwidgets.js) when the current
+      // slide changes (different for each slide format).
+      (function () {
+        // dispatch for htmlwidgets
+        function fireSlideEnter() {
+          const event = window.document.createEvent("Event");
+          event.initEvent("slideenter", true, true);
+          window.document.dispatchEvent(event);
+        }
+
+        function fireSlideChanged(previousSlide, currentSlide) {
+          fireSlideEnter();
+
+          // dispatch for shiny
+          if (window.jQuery) {
+            if (previousSlide) {
+              window.jQuery(previousSlide).trigger("hidden");
+            }
+            if (currentSlide) {
+              window.jQuery(currentSlide).trigger("shown");
+            }
+          }
+        }
+
+        // hookup for slidy
+        if (window.w3c_slidy) {
+          window.w3c_slidy.add_observer(function (slide_num) {
+            // slide_num starts at position 1
+            fireSlideChanged(null, w3c_slidy.slides[slide_num - 1]);
+          });
+        }
+
+      })();
+    </script>
+
     <script id="quarto-html-after-body" type="application/javascript">
       window.document.addEventListener("DOMContentLoaded", function (event) {
         const tabsets =  window.document.querySelectorAll(".panel-tabset-tabby")
