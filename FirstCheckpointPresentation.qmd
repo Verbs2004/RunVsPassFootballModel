@@ -222,7 +222,7 @@ ggplot(team_props, aes(x = offense_run_prop, y = defense_run_prop)) +
 
 * How is this useful?
 <ul>
-        <li class="fragment">Variables are known before sending players on the field</li>
+        <li class="fragment">Variables are known **before** sending players on the field</li>
         <li class="fragment">Can be built upon</li>
   </ul>
 
@@ -238,7 +238,7 @@ ggplot(team_props, aes(x = offense_run_prop, y = defense_run_prop)) +
 
 * Tracking data
 <ul>
-        <li>Tells us what players are on the field and where they are</li>
+        <li>Tells us **who** is on the field and **where** they are</li>
         <li>Formations, linemen splits, motions</li>
   </ul>
 
