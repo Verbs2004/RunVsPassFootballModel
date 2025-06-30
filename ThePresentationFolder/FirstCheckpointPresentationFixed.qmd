@@ -1,0 +1,498 @@
+---
+title: "Run or Pass?"
+author: "Verity and Cale"
+format:
+  revealjs:
+    theme: EDA_theme.scss
+    chalkboard: true
+    smaller: true
+    slide-number: c/t
+    code-line-numbers: false
+    linestretch: 1.25
+    html-math-method:
+      method: mathjax
+---
+
+## Predicting Offensive Play Calls in the NFL
+
+* Accurately anticipating a run or passing play is vital for defensive play-calling
+
+. . . 
+
+* The game is won through strategy, both on the field and the sidelines
+
+. . . 
+
+* Our goal is to build a model that predicts the likelihood of a run play given pre-snap context
+
+## Data
+
+* Play-by-play and tracking data from the first 9 weeks of the 2021 season
+
+. . . 
+
+* So far we have only used the basic plays data
+  <ul>
+      <li class="fragment">Key variables: quarter, down, distance, game clock, yard line, etc.</li>
+  </ul>
+
+. . . 
+
+* Created features:
+  <ul>
+      <li>Situational run rate</li>
+      <li>Yardline relative to the offense</li>
+      <li>Score differential from possession team's POV</li>
+      
+## Down and distance are major tells of what an offense will do
+---
+```{r}
+
+library(dplyr)
+library(ggplot2)
+library(viridis)
+library(scales)
+
+# Load your data
+plays <- read.csv("plays.csv")
+player_play <- read.csv("player_play.csv")
+games <- read.csv("games.csv")
+
+# Bin yardsToGo into categories
+plays <- plays %>%
+  mutate(
+    ytg_bin = case_when(
+      yardsToGo <= 1 ~ "Short (0-1)",
+      yardsToGo <= 3 ~ "Short (2-3)",
+      yardsToGo <= 6 ~ "Medium (4-6)",
+      yardsToGo <= 10 ~ "Medium (7-10)",
+      yardsToGo <= 20 ~ "Long (11-20)",
+      TRUE ~ "Very Long (21+)"
+    ),
+    down = factor(down, levels = 1:4),
+    ytg_bin = factor(ytg_bin, levels = c("Short (0-1)", "Short (2-3)", "Medium (4-6)", "Medium (7-10)", "Long (11-20)", "Very Long (21+)"))
+  )
+
+# Identify scrambles (exclude these as runs)
+scrambles <- plays %>%
+  filter(dropbackType == "SCRAMBLE", passResult == "R") %>%
+  select(gameId, playId) %>%
+  mutate(is_scramble = TRUE)
+
+# Identify run plays (hadRushAttempt = 1, exclude scrambles)
+run_plays <- player_play %>%
+  filter(hadRushAttempt == 1) %>%
+  select(gameId, playId) %>%
+  left_join(scrambles, by = c("gameId", "playId")) %>%
+  filter(is.na(is_scramble)) %>%
+  mutate(is_run = 1)
+
+# Join run info back to plays, mark non-run plays with 0
+plays <- plays %>%
+  left_join(run_plays %>% select(gameId, playId, is_run), by = c("gameId", "playId")) %>%
+  mutate(is_run = ifelse(is.na(is_run), 0, is_run))
+
+# Calculate run proportions by down and ytg_bin
+run_props <- plays %>%
+  filter(!is.na(down), !is.na(ytg_bin)) %>%
+  group_by(down, ytg_bin) %>%
+  summarise(
+    total_plays = n(),
+    run_plays = sum(is_run),
+    run_prop = run_plays / total_plays,
+    .groups = "drop"
+  )
+
+# Plot heatmap with viridis color scale
+ggplot(run_props, aes(x = down, y = ytg_bin, fill = run_prop)) +
+  geom_tile(color = "grey90", linewidth = 0.3) +
+  geom_text(aes(label = percent(run_prop, accuracy = 1)), color = "black", size = 4) +
+  scale_fill_viridis_c(
+    option = "D",
+    direction = -1,
+    limits = c(0, 1),
+    labels = percent_format(accuracy = 1),
+    name = "Run Probability"
+  ) +
+  labs(
+    subtitle = "Binned yards to go categories",
+    x = "Down",
+    y = "Yards to Go"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    panel.grid = element_blank(),
+    plot.title = element_text(face = "bold", hjust = 0.5, size = 18),
+    plot.subtitle = element_text(hjust = 0.5, size = 15),
+    axis.title = element_text(face = "bold", size = 20),
+    axis.text = element_text(color = "black", size = 15),
+    legend.title = element_text(face = "bold"),
+    legend.text = element_text(size = 10)
+  )
+
+
+```
+
+## Run proportions vary widely for different teams
+
+```{r}
+
+team_props <- data.frame(
+  team = c("ARI", "ATL", "BAL", "BUF", "CAR", "CHI", "CIN", "CLE", "DAL", "DEN", "DET", "GB", "HOU", "IND", "JAX", "KC", "LA", "LAC", "LV", "MIA", "MIN", "NE", "NO", "NYG", "NYJ", "PHI", "PIT", "SEA", "SF", "TB", "TEN", "WAS"),
+  offense_run_prop = c(
+    0.3409490, 0.5459883, 0.4584139, 0.3347548, 0.4082969, 0.5352941,
+    0.3520871, 0.4785156, 0.4701987, 0.3877551, 0.4104167, 0.3854545,
+    0.3958333, 0.3420139, 0.4272560, 0.3074004, 0.3476395, 0.3186373,
+    0.3432836, 0.3500967, 0.3581781, 0.4450758, 0.3992740, 0.4669510,
+    0.3694853, 0.4674556, 0.3465553, 0.4034707, 0.4317181, 0.3065954,
+    0.5476190, 0.3697183
+  ),
+  defense_run_prop = c(
+    0.3700935, 0.3641115, 0.3227017, 0.3697105, 0.4532374, 0.4688129,
+    0.4250936, 0.4320175, 0.4291755, 0.3721881, 0.4036511, 0.4897119,
+    0.4846626, 0.4495238, 0.3992467, 0.3447581, 0.3928571, 0.4123932,
+    0.4089069, 0.3677298, 0.3737166, 0.3938294, 0.4157088, 0.3775281,
+    0.3978495, 0.3492723, 0.3968566, 0.4137931, 0.4219512, 0.4066543,
+    0.2898551, 0.4022770
+  )
+)
+
+library(ggplot2)
+library(ggrepel)
+library(scales)
+library(dplyr)
+
+team_props <- team_props |>
+  mutate(
+    nudge_x = ifelse(team == "SEA", 0.007, 0),
+    nudge_y = ifelse(team == "SEA", 0.007, 0)
+  )
+
+ggplot(team_props, aes(x = offense_run_prop, y = defense_run_prop)) +
+  geom_point(color = "midnightblue") +
+  ggrepel::geom_text_repel(
+    aes(label = team),
+    size = 5,
+    max.overlaps = 40,
+    nudge_x = team_props$nudge_x,
+    nudge_y = team_props$nudge_y,
+    seed = 41
+  ) +geom_hline(yintercept = mean(team_props$defense_run_prop), linetype = "dashed", color = "gray60") +
+  geom_vline(xintercept = mean(team_props$offense_run_prop), linetype = "dashed", color = "gray60") +
+  scale_x_continuous(
+    labels = scales::percent_format(accuracy = 1),
+    limits = c(0.3, 0.55),
+    name = "Offensive Run Rate"
+  ) +
+  scale_y_continuous(
+    labels = scales::percent_format(accuracy = 1),
+    limits = c(0.3, 0.55),
+    name = "Defensive Run Rate Faced"
+  ) +
+  labs(
+    subtitle = "Dashed lines represent league average",
+    x = "Offensive Run Rate",
+    y = "Defensive Run Rate Faced"
+  ) +
+  theme_minimal(base_size = 16) +
+  theme(
+    plot.subtitle = element_text(hjust = 0.5),
+    axis.title = element_text(face = "bold", size = 20),
+    axis.text = element_text(color = "black", size = 13)
+  )
+
+```
+
+## Modeling
+
+* We first created a basic model using only info a coach can have before the play
+  <ul>
+        <li class="fragment">Quarter, down, distance, time left, opposing team, score differential, yard line</li>
+        <li class="fragment">Offensive and defensive run proportions, situational run proportions</li>
+  </ul>
+
+. . . 
+
+* Model trained on weeks 1-5, tested on weeks 6-9
+<ul>
+        <li>Accuracy: **72.1%**</li>
+        <li>AUC: **0.8085**</li>
+  </ul>
+
+. . . 
+
+* How is this useful?
+<ul>
+        <li class="fragment">Variables are known **before** sending players on the field</li>
+        <li class="fragment">Can be built upon</li>
+  </ul>
+
+## What's Next?
+
+* Including offensive personnel
+
+. . . 
+
+* Win probabilities
+
+. . .
+
+* Tracking data
+<ul>
+        <li>Tells us **who** is on the field and **where** they are</li>
+        <li>Formations, linemen splits, motions</li>
+  </ul>
+
+. . . 
+
+* Performance of players in the game before that play
+
+. . . 
+
+* We have the basic model, now we can build on it
+
+## Animated tracking play {.small-title}
+```{r playing, echo=FALSE, message=FALSE, warning=FALSE, out.width="100%", fig.width=14, fig.height=7}
+library(readr)
+library(dplyr)
+library(stringr)
+library(plotly)
+
+# 4) Load data
+games    <- read_csv("games.csv")
+plays    <- read_csv("plays.csv")
+tracking <- read_csv("tracking_week_1.csv")
+
+
+# 1) Full team-name lookup
+team_full <- c(
+  ARI="Arizona Cardinals", ATL="Atlanta Falcons", BAL="Baltimore Ravens",
+  BUF="Buffalo Bills", CAR="Carolina Panthers", CHI="Chicago Bears",
+  CIN="Cincinnati Bengals", CLE="Cleveland Browns", DAL="Dallas Cowboys",
+  DEN="Denver Broncos", DET="Detroit Lions", GB="Green Bay Packers",
+  HOU="Houston Texans", IND="Indianapolis Colts", JAX="Jacksonville Jaguars",
+  KC="Kansas City Chiefs", LA="Los Angeles Rams", LAC="Los Angeles Chargers",
+  LV="Las Vegas Raiders", MIA="Miami Dolphins", MIN="Minnesota Vikings",
+  NE="New England Patriots", NO="New Orleans Saints", NYG="New York Giants",
+  NYJ="New York Jets", PHI="Philadelphia Eagles", PIT="Pittsburgh Steelers",
+  SEA="Seattle Seahawks", SF="San Francisco 49ers", TB="Tampa Bay Buccaneers",
+  TEN="Tennessee Titans", WAS="Washington Commanders"
+)
+
+# 2) Ordinal-suffix helper
+ord_suffix <- function(x) {
+  if (x %% 10 == 1 && x %% 100 != 11) return("st")
+  if (x %% 10 == 2 && x %% 100 != 12) return("nd")
+  if (x %% 10 == 3 && x %% 100 != 13) return("rd")
+  "th"
+}
+
+# 3) Team colours + halo colours
+team_cols <- list(
+  ARI=c("#97233F","#000000"), ATL=c("#A71930","#000000"), BAL=c("#241773","#000000"),
+  BUF=c("#00338D","#C60C30"), CAR=c("#0085CA","#101820"), CHI=c("#0B162A","#C83803"),
+  CIN=c("#FB4F14","#000000"), CLE=c("#311D00","#FF3C00"), DAL=c("#003594","#041E42"),
+  DEN=c("#FB4F14","#002244"), DET=c("#0076B6","#B0B7BC"), GB =c("#203731","#FFB612"),
+  HOU=c("#03202F","#A71930"), IND=c("#002C5F","#A2AAAD"), JAX=c("#101820","#D7A22A"),
+  KC =c("#E31837","#FFB81C"), LA =c("#003594","#FFA300"), LAC=c("#0080C6","#FFC20E"),
+  LV =c("#000000","#A5ACAF"), MIA=c("#008E97","#FC4C02"), MIN=c("#4F2683","#FFC62F"),
+  NE =c("#002244","#C60C30"), NO =c("#101820","#D3BC8D"), NYG=c("#0B2265","#A71930"),
+  NYJ=c("#125740","#000000"), PHI=c("#004C54","#A5ACAF"), PIT=c("#FFB612","#101820"),
+  SEA=c("#002244","#69BE28"), SF =c("#AA0000","#B3995D"), TB =c("#D50A0A","#FF7900"),
+  TEN=c("#0C2340","#4B92DB","#C8102E"), WAS=c("#5A1414","#FFB612"),
+  football=c("#CBB67C","#663831")
+)
+
+# 5) Pick play
+gid <- 2022091200
+pid <- 286
+
+# 6) Filter & compute speed
+df <- tracking %>%
+  filter(gameId == gid, playId == pid) %>%
+  mutate(speed_mph = s * 2.236936)
+if (!nrow(df)) stop("No tracking data for that play!")
+
+# Identify football club to hide its legend entry
+ball_club <- df %>%
+  filter(displayName == "football") %>%
+  pull(club) %>%
+  unique()
+
+# 7) Pull metadata
+gm       <- games %>% filter(gameId == gid)
+pm       <- plays %>% filter(gameId == gid, playId == pid)
+los      <- pm$absoluteYardlineNumber[1]
+yards_to <- pm$yardsToGo[1]
+dir_vec  <- df$playDirection[!is.na(df$playDirection)]
+play_dir <- if (length(dir_vec)) dir_vec[1] else "right"
+fd_raw   <- if (play_dir == "right") los + yards_to else los - yards_to
+down     <- pm$down[1]
+qtr      <- pm$quarter[1]
+clock    <- pm$gameClock[1]
+
+# 8) Build title
+away_abbr <- gm$visitorTeamAbbr[1]
+home_abbr <- gm$homeTeamAbbr[1]
+away_full <- team_full[away_abbr]
+home_full <- team_full[home_abbr]
+q_label   <- paste0(qtr, ord_suffix(qtr), " Q")
+score_lbl <- sprintf("%d–%d",
+                     pm$preSnapVisitorScore,   # away first
+                     pm$preSnapHomeScore)  # home second
+dd_lbl    <- paste0(down, ord_suffix(down), " & ", yards_to)
+top_title <- paste(
+  sprintf("%s @ %s", away_full, home_full),
+  "│", q_label, clock,
+  "│ Score:", score_lbl,
+  "│", dd_lbl
+)
+
+# 9) Field shapes & yard-lines
+yard_lines      <- seq(10,110,by=10)
+yard_lines_shft <- yard_lines + 10
+mid_lines_shft  <- yard_lines_shft - 5
+
+shapes <- c(
+  lapply(seq(1,119), function(xv) list(type="line", xref="x", yref="y",
+                                       x0=xv, x1=xv, y0=23, y1=24,
+                                       line=list(color="white", width=1), layer="below")),
+  lapply(seq(1,119), function(xv) list(type="line", xref="x", yref="y",
+                                       x0=xv, x1=xv, y0=29, y1=30,
+                                       line=list(color="white", width=1), layer="below")),
+  lapply(yard_lines_shft, function(xv) list(type="line", xref="x", yref="y",
+                                            x0=xv-0.5, x1=xv+0.5, y0=24, y1=24,
+                                            line=list(color="white", width=1), layer="below")),
+  lapply(yard_lines_shft, function(xv) list(type="line", xref="x", yref="y",
+                                            x0=xv-0.5, x1=xv+0.5, y0=29, y1=29,
+                                            line=list(color="white", width=1), layer="below")),
+  lapply(mid_lines_shft, function(xv) list(type="line", xref="x", yref="y",
+                                           x0=xv, x1=xv, y0=0, y1=53.5,
+                                           line=list(color="white", width=1), layer="below")),
+  lapply(yard_lines_shft, function(xv) list(type="line", xref="x", yref="y",
+                                            x0=xv, x1=xv, y0=0, y1=53.5,
+                                            line=list(color="white", width=2), layer="below")),
+  list(
+    list(type="line", x0=los,   x1=los,   y0=0, y1=53.5,
+         line=list(color="blue", dash="dash", width=2), layer="below"),
+    list(type="line", x0=fd_raw, x1=fd_raw, y0=0, y1=53.5,
+         line=list(color="yellow", dash="dash", width=2), layer="below")
+  ),
+  list(
+    list(type="line", x0=10,  x1=10,  y0=0, y1=53.5,
+         line=list(color="white", width=4), layer="below"),
+    list(type="line", x0=110, x1=110, y0=0, y1=53.5,
+         line=list(color="white", width=4), layer="below")
+  ),
+  list(
+    list(type="rect", x0=0,   x1=10,  y0=0, y1=53.5,
+         fillcolor=team_cols[[home_abbr]][1], line=list(width=0), layer="below"),
+    list(type="rect", x0=110, x1=120, y0=0, y1=53.5,
+         fillcolor=team_cols[[away_abbr]][1], line=list(width=0), layer="below")
+  )
+)
+
+# 10) Yard-numbers & endzones
+num_labels <- data.frame(
+  x     = yard_lines_shft,
+  y_top = 48.5, y_bot = 5,
+  raw   = c("10","20","30","40","50","40","30","20","10","","")
+) %>% filter(raw!="") %>% mutate(
+  bottom_lbl = ifelse(x<60, paste0("\u25C2",raw),
+                      ifelse(x>60,paste0(raw,"\u25B8"), raw)),
+  top_lbl    = ifelse(x<60, paste0(raw,"\u25B8"),
+                      ifelse(x>60,paste0("\u25C2",raw), raw))
+)
+
+endzone_labels <- data.frame(
+  x     = c(5,115),
+  y     = rep(53.5/2,2),
+  text  = c(home_abbr, away_abbr),
+  angle = c(90,-90)
+)
+
+# 11) Build plot, hiding the football legend
+clubs <- unique(df$club)
+fig <- plot_ly()
+for (cl in clubs) {
+  sub     <- df %>% filter(club == cl)
+  fill    <- team_cols[[cl]][1]
+  halo    <- team_cols[[cl]][2]
+  is_ball <- cl == ball_club
+  
+  fig <- fig %>%
+    add_trace(
+      data       = sub,
+      x          = ~x, y = ~y, frame = ~frameId,
+      type       = "scatter", mode = "markers",
+      marker     = list(size = 12, color = fill,
+                        line = list(width = 2, color = halo)),
+      name       = if (cl == "football") "Football" else cl,
+      showlegend = !is_ball,
+      hoverinfo  = "text",
+      text       = ~paste0("nflId: ", nflId,
+                           "<br>Name: ", displayName,
+                           "<br>Speed: ", round(speed_mph,1), " MPH")
+    )
+}
+
+# 12) Layout & animation controls (no axis labels or ticks, title in black)
+fig <- fig %>%
+  layout(
+    paper_bgcolor = "#DEDEDF",
+    plot_bgcolor  = "#00B140",
+    margin        = list(t=140, r=200, b=60),
+    legend        = list(x=1.05, y=0.8),
+    title         = list(
+      text   = top_title,
+      x      = 0.5, xanchor="center",
+      y      = 1.15, yanchor="top",
+      font   = list(size=18, color="black")   # <-- title color set to black
+    ),
+    xaxis = list(
+      range          = c(0,120),
+      showgrid       = FALSE,
+      zeroline       = FALSE,
+      showticklabels = FALSE,
+      title          = ""
+    ),
+    yaxis = list(
+      range          = c(0,53.5),
+      showgrid       = FALSE,
+      zeroline       = FALSE,
+      showticklabels = FALSE,
+      title          = ""
+    ),
+    shapes = shapes
+  ) %>%
+  add_annotations(
+    data      = num_labels, x=~x, y=~y_top, text=~top_lbl,
+    textangle = 180, font=list(color="white", size=20, family="Arial Narrow"),
+    showarrow = FALSE, layer="below"
+  ) %>%
+  add_annotations(
+    data      = num_labels, x=~x, y=~y_bot, text=~bottom_lbl,
+    font      = list(color="white", size=20, family="Arial Narrow"),
+    showarrow = FALSE, layer="below"
+  ) %>%
+  add_annotations(
+    data      = endzone_labels, x=~x, y=~y, text=~text, textangle=~angle,
+    font      = list(size=32, color="white", family="Arial Narrow"), showarrow=FALSE
+  ) %>%
+  add_annotations(
+    x         = fd_raw, y=53.5, text=down,
+    font      = list(size=16, color="black"), showarrow=FALSE,
+    ay        = -25, bordercolor="black",
+    borderwidth=2, borderpad=4, bgcolor="#FF7300"
+  ) %>%
+  animation_opts(frame=100, transition=0, redraw=FALSE) %>%
+  animation_slider(currentvalue=list(prefix="Frame "))
+
+# 13) Show
+fig
+```
+## Appendix {.smaller}
+
+### Univariate AUCs for LogRegression1
+
+![Univariate AUCs for LogRegression1](Univariate_AUCs_for_LogRegression1.png){width=70%}
