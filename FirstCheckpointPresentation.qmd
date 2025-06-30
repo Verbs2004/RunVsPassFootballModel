@@ -19,7 +19,7 @@ format:
 
 . . . 
 
-* The game is won through strategy
+* The game is won through strategy, both on the field and the sidelines
 
 . . . 
 
@@ -123,8 +123,9 @@ ggplot(run_props, aes(x = down, y = ytg_bin, fill = run_prop)) +
   theme(
     panel.grid = element_blank(),
     plot.title = element_text(face = "bold", hjust = 0.5, size = 18),
-    plot.subtitle = element_text(hjust = 0.5, size = 13),
-    axis.text = element_text(color = "black"),
+    plot.subtitle = element_text(hjust = 0.5, size = 15),
+    axis.title = element_text(face = "bold", size = 20),
+    axis.text = element_text(color = "black", size = 15),
     legend.title = element_text(face = "bold"),
     legend.text = element_text(size = 10)
   )
@@ -196,8 +197,8 @@ ggplot(team_props, aes(x = offense_run_prop, y = defense_run_prop)) +
   theme_minimal(base_size = 16) +
   theme(
     plot.subtitle = element_text(hjust = 0.5),
-    axis.title = element_text(face = "bold"),
-    axis.text = element_text(color = "black")
+    axis.title = element_text(face = "bold", size = 20),
+    axis.text = element_text(color = "black", size = 13)
   )
 
 ```
@@ -245,6 +246,10 @@ ggplot(team_props, aes(x = offense_run_prop, y = defense_run_prop)) +
 . . . 
 
 * Performance of players in the game before that play
+
+. . . 
+
+* Use the model to evaluate player performance, specifically pass rushers
 
 . . . 
 
