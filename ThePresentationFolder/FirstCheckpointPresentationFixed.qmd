@@ -27,7 +27,7 @@ format:
 
 ## Data
 
-* Play-by-play and tracking data from the first 9 weeks of the 2021 season
+* Play-by-play and tracking data from the first 9 weeks of the 2022 season
 
 . . . 
 
@@ -494,5 +494,33 @@ fig
 ## Appendix {.smaller}
 
 ### Univariate AUCs for LogRegression1
-
 ![Univariate AUCs for LogRegression1](Univariate_AUCs_for_LogRegression1.png){width=70%}
+
+
+## Lowest vs Highest Accuracy Games {.smaller}
+
+![Lowest vs Highest Accuracy Games](LowestHighestAccuracyGames.png){width=70%}
+
+
+## Most and Least Predictable Teams {.smaller}
+
+![Most and Least Predictable Teams](MostandLeastPredictableTeams.png){width=70%}
+
+## Related Work {.smaller}
+
+| Year | Study | Key Angle |
+|------|-------|-----------|
+| 2024 | Chung – *Computer Vision + ML to Predict Offensive Play Calls in College Football* | End-to-end vision pipeline (CNN + LSTM) on NCAA broadcast film |
+| 2023 | Varadarajan – *Trench Chess* | Qualitative look at pre-snap “mind games”; highlights alignment & motion cues |
+| 2022 | Fernandes et al. – *Predicting Plays in the NFL* | Gradient-boosted trees on down/distance/score; ~70 % accuracy baseline |
+| 2022 | Lee, Chen & Lakshman – *Predicting Offensive Play Types in the NFL* | Combines personnel, formation & weather; logistic vs. XGBoost comparison |
+| 2021 | Ota – *Play Type Prediction & Tendency Analysis* | Hidden-Markov model captures drive-level momentum |
+| 2020 | Otting – *Predicting Play Calls with HMMs* | First large-scale HMM on play-by-play; stresses sequential dependencies |
+| 2019 | Teich et al. – *NFL Play Prediction* | Random forest vs. neural net; shows feature engineering > model complexity |
+| 2018 | Sung – *NFL Play Prediction Using Computer Vision* | Early attempt to extract formations from broadcast film |
+| — | *Can Next Gen Stats Help Predict Pass Plays?* (NFL Ops blog) | NGS tracking boosts pass-prediction accuracy by ~5 pp |
+
+*Takeaways for our model:*  
+- Tabular features alone plateau ≈ 70-75 % accuracy → need tracking/CV features.  
+- Sequential models (HMM, LSTM) add useful context.  
+- Vision work proves formations are extractable—aligns with our next-step roadmap.
