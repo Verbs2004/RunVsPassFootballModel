@@ -45,7 +45,7 @@ format:
       <li>Score differential from possession team's POV</li>
       
 ## Down and distance are major tells of what an offense will do
----
+
 ```{r}
 
 library(dplyr)
@@ -133,7 +133,7 @@ ggplot(run_props, aes(x = down, y = ytg_bin, fill = run_prop)) +
 
 ```
 
-## Run proportions vary widely for different teams
+## Run proportions vary widely from team-to-team
 
 ```{r}
 
