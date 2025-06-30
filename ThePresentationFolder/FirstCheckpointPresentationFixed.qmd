@@ -253,10 +253,18 @@ ggplot(team_props, aes(x = offense_run_prop, y = defense_run_prop)) +
 
 ## Animated tracking play {.small-title}
 ```{r playing, echo=FALSE, message=FALSE, warning=FALSE, out.width="100%", fig.width=14, fig.height=7}
-library(readr)
-library(dplyr)
-library(stringr)
-library(plotly)
+# ---- Package bootstrap (readr, dplyr, stringr, plotly) --------------------
+pkgs <- c("readr", "dplyr", "stringr", "plotly")
+
+missing_pkgs <- pkgs[!(pkgs %in% rownames(installed.packages()))]
+
+if (length(missing_pkgs)) {
+  install.packages(missing_pkgs, dependencies = TRUE)
+}
+
+invisible(lapply(pkgs, library, character.only = TRUE))
+# ---------------------------------------------------------------------------
+
 
 # 4) Load data
 games    <- read_csv("games.csv")
