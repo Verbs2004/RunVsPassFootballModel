@@ -136,71 +136,56 @@ ggplot(run_props, aes(x = down, y = ytg_bin, fill = run_prop)) +
 ## Run proportions vary widely for different teams
 
 ```{r}
+# ── 0) Package bootstrap ---------------------------------------------------
+pkgs <- c("ggplot2", "scales", "dplyr", "nflreadr", "nflplotR")  # ggrepel no longer needed
+missing <- pkgs[!(pkgs %in% rownames(installed.packages()))]
+if (length(missing)) install.packages(missing, dependencies = TRUE)
+invisible(lapply(pkgs, library, character.only = TRUE))
+# --------------------------------------------------------------------------
 
+# ── 1) Data (your existing tibble) ----------------------------------------
 team_props <- data.frame(
-  team = c("ARI", "ATL", "BAL", "BUF", "CAR", "CHI", "CIN", "CLE", "DAL", "DEN", "DET", "GB", "HOU", "IND", "JAX", "KC", "LA", "LAC", "LV", "MIA", "MIN", "NE", "NO", "NYG", "NYJ", "PHI", "PIT", "SEA", "SF", "TB", "TEN", "WAS"),
+  team = c("ARI","ATL","BAL","BUF","CAR","CHI","CIN","CLE","DAL","DEN","DET",
+           "GB","HOU","IND","JAX","KC","LA","LAC","LV","MIA","MIN","NE","NO",
+           "NYG","NYJ","PHI","PIT","SEA","SF","TB","TEN","WAS"),
   offense_run_prop = c(
-    0.3409490, 0.5459883, 0.4584139, 0.3347548, 0.4082969, 0.5352941,
-    0.3520871, 0.4785156, 0.4701987, 0.3877551, 0.4104167, 0.3854545,
-    0.3958333, 0.3420139, 0.4272560, 0.3074004, 0.3476395, 0.3186373,
-    0.3432836, 0.3500967, 0.3581781, 0.4450758, 0.3992740, 0.4669510,
-    0.3694853, 0.4674556, 0.3465553, 0.4034707, 0.4317181, 0.3065954,
-    0.5476190, 0.3697183
+    0.3409490,0.5459883,0.4584139,0.3347548,0.4082969,0.5352941,0.3520871,
+    0.4785156,0.4701987,0.3877551,0.4104167,0.3854545,0.3958333,0.3420139,
+    0.4272560,0.3074004,0.3476395,0.3186373,0.3432836,0.3500967,0.3581781,
+    0.4450758,0.3992740,0.4669510,0.3694853,0.4674556,0.3465553,0.4034707,
+    0.4317181,0.3065954,0.5476190,0.3697183
   ),
   defense_run_prop = c(
-    0.3700935, 0.3641115, 0.3227017, 0.3697105, 0.4532374, 0.4688129,
-    0.4250936, 0.4320175, 0.4291755, 0.3721881, 0.4036511, 0.4897119,
-    0.4846626, 0.4495238, 0.3992467, 0.3447581, 0.3928571, 0.4123932,
-    0.4089069, 0.3677298, 0.3737166, 0.3938294, 0.4157088, 0.3775281,
-    0.3978495, 0.3492723, 0.3968566, 0.4137931, 0.4219512, 0.4066543,
-    0.2898551, 0.4022770
+    0.3700935,0.3641115,0.3227017,0.3697105,0.4532374,0.4688129,0.4250936,
+    0.4320175,0.4291755,0.3721881,0.4036511,0.4897119,0.4846626,0.4495238,
+    0.3992467,0.3447581,0.3928571,0.4123932,0.4089069,0.3677298,0.3737166,
+    0.3938294,0.4157088,0.3775281,0.3978495,0.3492723,0.3968566,0.4137931,
+    0.4219512,0.4066543,0.2898551,0.4022770
   )
 )
 
-library(ggplot2)
-library(ggrepel)
-library(scales)
-library(dplyr)
-
-team_props <- team_props |>
-  mutate(
-    nudge_x = ifelse(team == "SEA", 0.007, 0),
-    nudge_y = ifelse(team == "SEA", 0.007, 0)
-  )
-
-ggplot(team_props, aes(x = offense_run_prop, y = defense_run_prop)) +
-  geom_point(color = "midnightblue") +
-  ggrepel::geom_text_repel(
-    aes(label = team),
-    size = 5,
-    max.overlaps = 40,
-    nudge_x = team_props$nudge_x,
-    nudge_y = team_props$nudge_y,
-    seed = 41
-  ) +geom_hline(yintercept = mean(team_props$defense_run_prop), linetype = "dashed", color = "gray60") +
-  geom_vline(xintercept = mean(team_props$offense_run_prop), linetype = "dashed", color = "gray60") +
-  scale_x_continuous(
-    labels = scales::percent_format(accuracy = 1),
-    limits = c(0.3, 0.55),
-    name = "Offensive Run Rate"
-  ) +
-  scale_y_continuous(
-    labels = scales::percent_format(accuracy = 1),
-    limits = c(0.3, 0.55),
-    name = "Defensive Run Rate Faced"
-  ) +
-  labs(
-    subtitle = "Dashed lines represent league average",
-    x = "Offensive Run Rate",
-    y = "Defensive Run Rate Faced"
-  ) +
+# ── 2) Plot with logos -----------------------------------------------------
+ggplot(team_props,
+       aes(x = offense_run_prop, y = defense_run_prop)) +
+  # ← nflplotR grabs the ESPN-style SVG/PNG URLs that live inside nflreadr::load_teams()
+  nflplotR::geom_nfl_logos(aes(team_abbr = team), width = 0.06) +
+  geom_hline(yintercept = mean(team_props$defense_run_prop),
+             linetype = "dashed", colour = "grey60") +
+  geom_vline(xintercept = mean(team_props$offense_run_prop),
+             linetype = "dashed", colour = "grey60") +
+  scale_x_continuous(labels = scales::percent_format(accuracy = 1),
+                     limits = c(0.30, 0.55),
+                     name   = "Offensive Run Rate") +
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1),
+                     limits = c(0.30, 0.55),
+                     name   = "Defensive Run Rate Faced") +
+  labs(subtitle = "Dashed lines represent league average") +
   theme_minimal(base_size = 16) +
   theme(
     plot.subtitle = element_text(hjust = 0.5),
-    axis.title = element_text(face = "bold", size = 20),
-    axis.text = element_text(color = "black", size = 13)
+    axis.title    = element_text(face = "bold", size = 20),
+    axis.text     = element_text(colour = "black", size = 13)
   )
-
 ```
 
 ## Modeling
