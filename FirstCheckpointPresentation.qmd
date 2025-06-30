@@ -249,5 +249,9 @@ ggplot(team_props, aes(x = offense_run_prop, y = defense_run_prop)) +
 
 . . . 
 
+* Use the model to evaluate player performance, specifically pass rushers
+
+. . . 
+
 * We have the basic model, now we can build on it
 
