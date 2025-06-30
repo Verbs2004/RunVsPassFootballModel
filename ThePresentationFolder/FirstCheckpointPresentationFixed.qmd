@@ -491,7 +491,7 @@ fig <- fig %>%
 # 13) Show
 fig
 ```
-## Appendix {.smaller}
+## A taste of more stuff we've worked on {.smaller}
 
 ### Univariate AUCs for LogRegression1
 ![Univariate AUCs for LogRegression1](Univariate_AUCs_for_LogRegression1.png){width=70%}
@@ -524,3 +524,5 @@ fig
 - Tabular features alone plateau ≈ 70-75 % accuracy → need tracking/CV features.  
 - Sequential models (HMM, LSTM) add useful context.  
 - Vision work proves formations are extractable—aligns with our next-step roadmap.
+
+## Questions?
