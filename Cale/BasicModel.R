@@ -10,7 +10,9 @@ library(nflreadr)
 library(broom)
 library(pROC)
 
-# hello
+plays <-  read_csv("plays.csv")
+games <-  read_csv("games.csv")
+player_play <- read_csv("player_play.csv")
 
 # --- Field Background ---
 field_params <- list(
@@ -353,3 +355,36 @@ server <- function(input, output) {
 
 # Run App
 shinyApp(ui = ui, server = server)
+
+
+# --- Variable Importance Chart ---
+
+library(broom)
+
+coefs <- tidy(final_model) |>
+  filter(term != "(Intercept)") |>
+  mutate(
+    abs_estimate = abs(estimate),
+    odds_ratio = exp(estimate)
+  )
+
+ggplot(coefs, aes(x = reorder(term, abs_estimate), y = abs_estimate)) +
+  geom_col(fill = "steelblue") +
+  coord_flip() +
+  labs(
+    title = "Variable Importance (|Coefficient|)",
+    x = "Variable",
+    y = "Absolute Value of Coefficient"
+  ) +
+  theme_minimal()
+
+ggplot(coefs, aes(x = reorder(term, odds_ratio), y = odds_ratio)) +
+  geom_col(fill = "darkgreen") +
+  coord_flip() +
+  labs(
+    title = "Variable Importance (Odds Ratios)",
+    x = "Variable",
+    y = "Odds Ratio (exp(coef))"
+  ) +
+  theme_minimal()
+
