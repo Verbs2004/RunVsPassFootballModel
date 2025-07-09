@@ -105,6 +105,7 @@ run_week_cv <- function(holdout_week) {
 cv_preds <- map_dfr(sort(unique(model_data$week)), run_week_cv)
 
 # --- Evaluate ---
+players <- read_csv("players.csv")
 cv_preds |>
   summarise(
     accuracy = mean(pred_bin == is_run, na.rm = TRUE),
