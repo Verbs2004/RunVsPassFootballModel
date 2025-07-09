@@ -10,10 +10,6 @@ library(nflreadr)
 library(broom)
 library(pROC)
 
-plays <-  read_csv("plays.csv")
-games <-  read_csv("games.csv")
-player_play <- read_csv("player_play.csv")
-
 # --- Field Background ---
 field_params <- list(
   field_apron = "springgreen3",
@@ -138,6 +134,60 @@ model_data <- model_data |>
             by = c("possessionTeam", "quarter", "down", "ytg_bin")) |>
   rename(team_situational_run_prop = run_prop)
 
+get_weekly_props <- function(up_to_week) {
+  # Filter plays from weeks < current test week
+  historical_plays <- model_data |> filter(week < up_to_week)
+  
+  # Offense Run Proportions
+  offense_run_props <- historical_plays |>
+    group_by(possessionTeam) |>
+    summarise(
+      team_plays = n(),
+      team_run_plays = sum(is_run, na.rm = TRUE),
+      offense_run_prop = team_run_plays / team_plays,
+      .groups = "drop"
+    )
+  
+  # Defense Run Proportions
+  defense_run_props <- historical_plays |>
+    group_by(defensiveTeam) |>
+    summarise(
+      defense_plays = n(),
+      defense_run_plays = sum(is_run, na.rm = TRUE),
+      defense_run_prop = defense_run_plays / defense_plays,
+      .groups = "drop"
+    )
+  
+  # Team Situational Run Proportions
+  historical_plays <- historical_plays |>
+    mutate(
+      ytg_bin = case_when(
+        yardsToGo <= 1 ~ "Short (0-1)",
+        yardsToGo <= 3 ~ "Short (2-3)",
+        yardsToGo <= 6 ~ "Medium (4-6)",
+        yardsToGo <= 10 ~ "Medium (7-10)",
+        yardsToGo <= 20 ~ "Long (11-20)",
+        TRUE ~ "Very Long (21+)"
+      )
+    )
+  
+  team_situational_run_props <- historical_plays |>
+    group_by(possessionTeam, quarter, down, ytg_bin) |>
+    summarise(
+      total_plays = n(),
+      run_plays = sum(is_run, na.rm = TRUE),
+      team_situational_run_prop = run_plays / total_plays,
+      .groups = "drop"
+    )
+  
+  list(
+    offense = offense_run_props,
+    defense = defense_run_props,
+    situational = team_situational_run_props
+  )
+}
+
+
 # --- Specific Training Data ---
 cv_data <- model_data |>
   filter(
@@ -163,11 +213,86 @@ cv_data <- model_data |>
     offense_run_prop, defense_run_prop, team_situational_run_prop
   )
 
+# --- Rolling Week-by-Week Cross-Validation (train on weeks < holdout_week) ---
+
+library(lubridate)
+
 run_week_cv <- function(holdout_week) {
-  train <- cv_data |> filter(week != holdout_week)
-  test  <- cv_data |> filter(week == holdout_week)
+  train <- model_data |> filter(week < holdout_week)
+  test  <- model_data |> filter(week == holdout_week)
   
-  # Fit model
+  if (nrow(train) == 0 || nrow(test) == 0) return(NULL)
+  
+  # --- Recompute derived variables ---
+  enrich <- function(df) {
+    df |>
+      mutate(
+        clock_seconds = as.numeric(ms(str_sub(gameClock, 1, 5))),
+        score_diff = case_when(
+          possessionTeam == homeTeamAbbr ~ preSnapHomeScore - preSnapVisitorScore,
+          possessionTeam == visitorTeamAbbr ~ preSnapVisitorScore - preSnapHomeScore,
+          TRUE ~ NA_real_
+        ),
+        yardline = ifelse(possessionTeam == yardlineSide | yardlineNumber == 50, yardlineNumber, 100 - yardlineNumber),
+        quarter = factor(quarter)
+      )
+  }
+  
+  train <- enrich(train)
+  test <- enrich(test)
+  
+  train <- train |> mutate(quarter = as.numeric(as.character(quarter)))
+  test  <- test  |> mutate(quarter = as.numeric(as.character(quarter)))
+  
+  # --- Get team props using only past weeks ---
+  props <- get_weekly_props(holdout_week)
+  
+  # --- Join team props ---
+  train <- train |>
+    left_join(props$offense, by = "possessionTeam") |>
+    left_join(props$defense, by = "defensiveTeam") |>
+    mutate(
+      ytg_bin = case_when(
+        yardsToGo <= 1 ~ "Short (0-1)",
+        yardsToGo <= 3 ~ "Short (2-3)",
+        yardsToGo <= 6 ~ "Medium (4-6)",
+        yardsToGo <= 10 ~ "Medium (7-10)",
+        yardsToGo <= 20 ~ "Long (11-20)",
+        TRUE ~ "Very Long (21+)"
+      )
+    ) |>
+    left_join(props$situational, by = c("possessionTeam", "quarter", "down", "ytg_bin"))
+  
+  test <- test |>
+    left_join(props$offense, by = "possessionTeam") |>
+    left_join(props$defense, by = "defensiveTeam") |>
+    mutate(
+      ytg_bin = case_when(
+        yardsToGo <= 1 ~ "Short (0-1)",
+        yardsToGo <= 3 ~ "Short (2-3)",
+        yardsToGo <= 6 ~ "Medium (4-6)",
+        yardsToGo <= 10 ~ "Medium (7-10)",
+        yardsToGo <= 20 ~ "Long (11-20)",
+        TRUE ~ "Very Long (21+)"
+      )
+    ) |>
+    left_join(props$situational, by = c("possessionTeam", "quarter", "down", "ytg_bin"))
+  
+  # --- Handle missing props ---
+  test <- test |>
+    mutate(
+      offense_run_prop = ifelse("offense_run_prop" %in% names(test),
+                                ifelse(is.na(offense_run_prop), mean(train$offense_run_prop, na.rm = TRUE), offense_run_prop),
+                                mean(train$offense_run_prop, na.rm = TRUE)),
+      defense_run_prop = ifelse("defense_run_prop" %in% names(test),
+                                ifelse(is.na(defense_run_prop), mean(train$defense_run_prop, na.rm = TRUE), defense_run_prop),
+                                mean(train$defense_run_prop, na.rm = TRUE)),
+      team_situational_run_prop = ifelse("team_situational_run_prop" %in% names(test),
+                                         ifelse(is.na(team_situational_run_prop), mean(train$team_situational_run_prop, na.rm = TRUE), team_situational_run_prop),
+                                         mean(train$team_situational_run_prop, na.rm = TRUE))
+    )
+  
+  # --- Fit and predict ---
   model <- glm(
     is_run ~ quarter + down + yardsToGo + clock_seconds + score_diff + yardline +
       offense_run_prop + defense_run_prop + team_situational_run_prop,
@@ -175,21 +300,22 @@ run_week_cv <- function(holdout_week) {
     family = binomial()
   )
   
-  # Predict
   test <- test |>
     mutate(
       pred_prob = predict(model, newdata = test, type = "response"),
-      pred_bin = ifelse(pred_prob > 0.5, 1, 0)
+      pred_bin = ifelse(pred_prob > 0.5, 1, 0),
+      fold_week = holdout_week
     )
   
-  # Return predictions with fold label
-  test |> mutate(fold_week = holdout_week)
+  return(test)
 }
 
+cv_preds <- map_dfr(sort(unique(model_data$week)), run_week_cv)
+
+# Run CV across weeks 2 through max week
 all_weeks <- sort(unique(cv_data$week))
 cv_preds <- map_dfr(all_weeks, run_week_cv)
 
-# Overall performance
 cv_preds |>
   summarise(
     accuracy = mean(pred_bin == is_run, na.rm = TRUE),
@@ -197,10 +323,8 @@ cv_preds |>
   )
 
 # AUC
-library(pROC)
-roc(cv_preds$is_run, cv_preds$pred_prob)$auc
-
-
+roc_obj <- roc(cv_preds$is_run, cv_preds$pred_prob)
+print(roc_obj$auc)
 
 # --- Confusion Matrix ---
 table(
@@ -387,4 +511,3 @@ ggplot(coefs, aes(x = reorder(term, odds_ratio), y = odds_ratio)) +
     y = "Odds Ratio (exp(coef))"
   ) +
   theme_minimal()
-

@@ -10,9 +10,7 @@ library(nflreadr)
 library(broom)
 library(pROC)
 
-plays <-  read_csv("plays.csv")
-games <-  read_csv("games.csv")
-player_play <- read_csv("player_play.csv")
+# hello
 
 # --- Field Background ---
 field_params <- list(
@@ -99,6 +97,12 @@ model_data <- plays |>
   mutate(is_run = ifelse(is.na(is_run), 0, is_run))
 
 model_data <- model_data |>
+  mutate(
+    offenseFormation = as.factor(offenseFormation),
+    receiverAlignment = as.factor(receiverAlignment)
+  )
+
+model_data <- model_data |>
   left_join(
     offense_run_props |> select(possessionTeam, offense_run_prop = team_run_prop),
     by = "possessionTeam"
@@ -139,77 +143,98 @@ model_data <- model_data |>
   rename(team_situational_run_prop = run_prop)
 
 # --- Specific Training Data ---
-cv_data <- model_data |>
-  filter(
-    !is.na(gameClock),
-    !is.na(down),
-    !is.na(yardsToGo),
-    !is.na(is_run),
-    !is.na(week)
-  ) |>
+train_data <- model_data |> filter(week <= 5)
+test_data  <- model_data |> filter(week >= 6)
+
+ltrain_data <- train_data |>
+  filter(!is.na(gameClock), !is.na(down), !is.na(yardsToGo), !is.na(offenseFormation), !is.na(receiverAlignment)) |>
   mutate(
     clock_str = str_sub(as.character(gameClock), 1, 5),
     clock_seconds = as.numeric(ms(clock_str)),
+    quarter = factor(quarter),
     score_diff = case_when(
       possessionTeam == homeTeamAbbr ~ preSnapHomeScore - preSnapVisitorScore,
       possessionTeam == visitorTeamAbbr ~ preSnapVisitorScore - preSnapHomeScore,
-      TRUE ~ NA_real_
-    ),
-    yardline = ifelse(possessionTeam == yardlineSide | yardlineNumber == 50, yardlineNumber, 100 - yardlineNumber),
-    quarter = factor(quarter),
+      TRUE ~ NA_real_),
+    yardline = ifelse(possessionTeam == yardlineSide | yardlineNumber == 50, yardlineNumber, 100 - yardlineNumber)
   ) |>
-  select(
-    is_run, week, quarter, down, yardsToGo, clock_seconds, score_diff, yardline,
-    offense_run_prop, defense_run_prop, team_situational_run_prop
+  select(is_run, quarter, down, yardsToGo, clock_seconds, score_diff, yardline,
+         offense_run_prop, defense_run_prop, team_situational_run_prop,
+         offenseFormation, receiverAlignment)
+
+run_model <- glm(
+  is_run ~ quarter + down + yardsToGo + clock_seconds + score_diff + yardline +
+    offense_run_prop + defense_run_prop + team_situational_run_prop +
+    offenseFormation + receiverAlignment,
+  data = ltrain_data,
+  family = binomial()
+)
+
+ltest_data <- test_data |>
+  filter(!is.na(gameClock), !is.na(down), !is.na(yardsToGo), !is.na(offenseFormation), !is.na(receiverAlignment)) |>
+  mutate(
+    clock_str = str_sub(as.character(gameClock), 1, 5),
+    clock_seconds = as.numeric(ms(clock_str)),
+    quarter = factor(quarter, levels = levels(ltrain_data$quarter)),  # ensure consistent levels
+    score_diff = case_when(
+      possessionTeam == homeTeamAbbr ~ preSnapHomeScore - preSnapVisitorScore,
+      possessionTeam == visitorTeamAbbr ~ preSnapVisitorScore - preSnapHomeScore,
+      TRUE ~ NA_real_),
+    yardline = ifelse(possessionTeam == yardlineSide | yardlineNumber == 50, yardlineNumber, 100 - yardlineNumber)
+  ) |>
+  select(is_run, quarter, down, yardsToGo, clock_seconds, score_diff, yardline,
+         offense_run_prop, defense_run_prop, team_situational_run_prop,
+         offenseFormation, receiverAlignment)
+
+ltest_data <- ltest_data |>
+  filter(
+    receiverAlignment %in% levels(ltrain_data$receiverAlignment),
+    offenseFormation %in% levels(ltrain_data$offenseFormation)
+  ) |>
+  mutate(
+    receiverAlignment = factor(receiverAlignment, levels = levels(ltrain_data$receiverAlignment)),
+    offenseFormation = factor(offenseFormation, levels = levels(ltrain_data$offenseFormation))
   )
 
-run_week_cv <- function(holdout_week) {
-  train <- cv_data |> filter(week != holdout_week)
-  test  <- cv_data |> filter(week == holdout_week)
-  
-  # Fit model
-  model <- glm(
-    is_run ~ quarter + down + yardsToGo + clock_seconds + score_diff + yardline +
-      offense_run_prop + defense_run_prop + team_situational_run_prop,
-    data = train,
-    family = binomial()
-  )
-  
-  # Predict
-  test <- test |>
-    mutate(
-      pred_prob = predict(model, newdata = test, type = "response"),
-      pred_bin = ifelse(pred_prob > 0.5, 1, 0)
-    )
-  
-  # Return predictions with fold label
-  test |> mutate(fold_week = holdout_week)
-}
-
-all_weeks <- sort(unique(cv_data$week))
-cv_preds <- map_dfr(all_weeks, run_week_cv)
-
-# Overall performance
-cv_preds |>
-  summarise(
-    accuracy = mean(pred_bin == is_run, na.rm = TRUE),
-    brier_score = mean((pred_prob - is_run)^2, na.rm = TRUE)
+ltest_data <- ltest_data |>
+  mutate(
+    pred_run_prob = predict(run_model, newdata = ltest_data, type = "response"),
+    pred_run_binary = ifelse(pred_run_prob > 0.5, 1, 0)
   )
 
-# AUC
+ltrain_data <- ltrain_data |>
+  mutate(
+    offenseFormation = factor(offenseFormation),
+    receiverAlignment = factor(receiverAlignment)
+  )
+
+ltest_data <- ltest_data |>
+  mutate(
+    offenseFormation = factor(offenseFormation, levels = levels(ltrain_data$offenseFormation)),
+    receiverAlignment = factor(receiverAlignment, levels = levels(ltrain_data$receiverAlignment))
+  )
+
+mean(ltest_data$pred_run_binary == ltest_data$is_run)
 library(pROC)
-roc(cv_preds$is_run, cv_preds$pred_prob)$auc
+roc(ltest_data$is_run, ltest_data$pred_run_prob)$auc
 
+# --- Evaluation Metrics (on test set) ---
+accuracy <- mean(ltest_data$pred_run_binary == ltest_data$is_run)
+misclass_rate <- mean(ltest_data$pred_run_binary != ltest_data$is_run)
+brier_score <- mean((ltest_data$pred_run_prob - ltest_data$is_run)^2)
 
+print(accuracy)
+print(misclass_rate)
+print(brier_score)
 
-# --- Confusion Matrix ---
+# --- Confusion Matrix (on test set) ---
 table(
   Predicted = factor(ifelse(ltest_data$pred_run_binary == 1, "Run", "Pass"), levels = c("Run", "Pass")),
   Actual = factor(ifelse(ltest_data$is_run == 1, "Run", "Pass"), levels = c("Run", "Pass"))
 )
 
-# --- ROC Curve ---
-run_roc <- roc(cv_preds$is_run, cv_preds$pred_prob)
+# --- ROC Curve (on test set) ---
+run_roc <- roc(ltest_data$is_run, ltest_data$pred_run_prob)
 print(run_roc$auc)
 
 roc_df <- tibble(
@@ -228,8 +253,8 @@ ggplot(roc_df, aes(x = 1 - specificity, y = sensitivity)) +
   ) +
   theme_minimal()
 
-# --- Calibration Plot ---
-ggplot(cv_preds, aes(x = pred_prob, y = is_run)) +
+# --- Calibration Plot (on test set) ---
+ggplot(ltest_data, aes(x = pred_run_prob, y = is_run)) +
   geom_point(alpha = 0.3) +
   geom_smooth(method = "loess", se = FALSE, color = "blue") +
   geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "red") +
@@ -239,15 +264,6 @@ ggplot(cv_preds, aes(x = pred_prob, y = is_run)) +
     y = "Observed Outcome (Run = 1, Pass = 0)"
   ) +
   theme_minimal()
-
-# --- Final Model ---
-
-final_model <- glm(
-  is_run ~ quarter + down + yardsToGo + clock_seconds + score_diff + yardline +
-    offense_run_prop + defense_run_prop + team_situational_run_prop,
-  data = cv_data,
-  family = binomial()
-)
 
 # --- Shiny App: Run Play Probability Predictor ---
 ui <- fluidPage(
@@ -262,7 +278,11 @@ ui <- fluidPage(
       numericInput("score_diff", "Score Differential (possession team):", value = 0, min = -100, max = 100),
       numericInput("yardline", "Field Position (0 = own goal line, 100 = opponent’s):", value = 50, min = 1, max = 99),
       selectInput("off_team", "Offensive Team:", choices = sort(unique(model_data$possessionTeam)), selected = "KC"),
-      selectInput("def_team", "Defensive Team:", choices = sort(unique(model_data$defensiveTeam)), selected = "SF")
+      selectInput("def_team", "Defensive Team:", choices = sort(unique(model_data$defensiveTeam)), selected = "SF"),
+      selectInput("offenseFormation", "Offensive Formation:",
+                  choices = sort(unique(ltrain_data$offenseFormation))),
+      selectInput("receiverAlignment", "Receiver Alignment:",
+                  choices = sort(unique(ltrain_data$receiverAlignment)))
     ),
     
     mainPanel(
@@ -320,7 +340,7 @@ server <- function(input, output) {
     
     # Format prediction input
     new_data <- tibble(
-      quarter = factor(input$quarter, levels = levels(cv_data$quarter)),
+      quarter = factor(input$quarter, levels = levels(ltrain_data$quarter)),
       down = input$down,
       yardsToGo = input$yardsToGo,
       clock_seconds = clock_seconds,
@@ -328,11 +348,13 @@ server <- function(input, output) {
       yardline = input$yardline,
       offense_run_prop = off_prop,
       defense_run_prop = def_prop,
-      team_situational_run_prop = situational_prop
+      team_situational_run_prop = situational_prop,
+      offenseFormation = factor(input$offenseFormation, levels = levels(ltrain_data$offenseFormation)),
+      receiverAlignment = factor(input$receiverAlignment, levels = levels(ltrain_data$receiverAlignment))
     )
     
     # Predict using trained model (weeks 1–5)
-    prob <- predict(final_model, newdata = new_data, type = "response")
+    prob <- predict(run_model, newdata = new_data, type = "response")
     cat(sprintf("Estimated Run Probability: %.1f%%", prob * 100))
   })
   
@@ -355,36 +377,3 @@ server <- function(input, output) {
 
 # Run App
 shinyApp(ui = ui, server = server)
-
-
-# --- Variable Importance Chart ---
-
-library(broom)
-
-coefs <- tidy(final_model) |>
-  filter(term != "(Intercept)") |>
-  mutate(
-    abs_estimate = abs(estimate),
-    odds_ratio = exp(estimate)
-  )
-
-ggplot(coefs, aes(x = reorder(term, abs_estimate), y = abs_estimate)) +
-  geom_col(fill = "steelblue") +
-  coord_flip() +
-  labs(
-    title = "Variable Importance (|Coefficient|)",
-    x = "Variable",
-    y = "Absolute Value of Coefficient"
-  ) +
-  theme_minimal()
-
-ggplot(coefs, aes(x = reorder(term, odds_ratio), y = odds_ratio)) +
-  geom_col(fill = "darkgreen") +
-  coord_flip() +
-  labs(
-    title = "Variable Importance (Odds Ratios)",
-    x = "Variable",
-    y = "Odds Ratio (exp(coef))"
-  ) +
-  theme_minimal()
-
