@@ -10,6 +10,10 @@ library(nflreadr)
 library(broom)
 library(pROC)
 
+plays <-  read_csv("plays.csv")
+games <-  read_csv("games.csv")
+player_play <- read_csv("player_play.csv")
+
 # --- Field Background ---
 field_params <- list(
   field_apron = "springgreen3",
@@ -106,6 +110,7 @@ cv_preds <- map_dfr(sort(unique(model_data$week)), run_week_cv)
 
 # --- Evaluate ---
 players <- read_csv("players.csv")
+
 cv_preds |>
   summarise(
     accuracy = mean(pred_bin == is_run, na.rm = TRUE),
@@ -120,11 +125,11 @@ cv_preds <- map_dfr(sort(unique(model_data$week)), run_week_cv) |>
 pass_rushers <- player_play |>
   filter(wasInitialPassRusher == 1) |>
   select(gameId, playId, nflId, teamAbbr, causedPressure, quarterbackHit,
-         sackYardsAsDefense, timeToPressureAsPassRusher, getOffTimeAsPassRusher)
+         sackYardsAsDefense, halfSackYardsAsDefense, timeToPressureAsPassRusher, getOffTimeAsPassRusher)
 
 pass_rushers <- pass_rushers |>
   left_join(cv_preds |> select(gameId, playId, expected_pass_prob, is_run), by = c("gameId", "playId")) |>
-  filter(!is.na(expected_pass_prob))  # drop any unmatched plays
+  filter(!is.na(expected_pass_prob))
 
 pass_rusher_summary <- pass_rushers |>
   group_by(nflId, teamAbbr) |>
@@ -136,7 +141,7 @@ pass_rusher_summary <- pass_rushers |>
     hit_rate = mean(quarterbackHit == 1, na.rm = TRUE),
     avg_getoff = mean(getOffTimeAsPassRusher, na.rm = TRUE),
     avg_time_to_pressure = mean(timeToPressureAsPassRusher[causedPressure == TRUE], na.rm = TRUE),
-    total_sacks = sum(sackYardsAsDefense > 0, na.rm = TRUE)
+    total_sacks = sum(sackYardsAsDefense < 0, na.rm = TRUE) + 0.5 * sum(halfSackYardsAsDefense < 0, na.rm = TRUE)
   ) |>
-  filter(plays >= 20)  # Optional: Filter out small sample sizes
+  filter(plays >= 20)
 
