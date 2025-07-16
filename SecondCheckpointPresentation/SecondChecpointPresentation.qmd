@@ -13,21 +13,24 @@ format:
       method: mathjax
 ---
 
-## Quarto
+## Predicting Offensive Play Calls in the NFL
 
-Quarto enables you to weave together content and executable code into a finished presentation. To learn more about Quarto presentations see <https://quarto.org/docs/presentations/>.
+* Accurately anticipating a run or passing play is vital for defensive play-calling
 
-## Bullets
+. . . 
 
-When you click the **Render** button a document will be generated that includes:
+* The game is won through strategy, both on the field and the sidelines
 
--   Content authored with markdown
--   Output from executable code
+. . . 
 
-## Code
+* Our goal is to build a model that predicts the likelihood of a run play given pre-snap context
 
-When you click the **Render** button a presentation will be generated that includes both content and the output of embedded code. You can embed code like this:
+## Data
 
-```{r}
-1 + 1
-```
+* NFL play-by-play data from 2016-2023 seasons
+
+* Tracking data from first 9 weeks of 2022 season
+
+. . . 
+
+* Down, distance, quarter, yardline, score differential, time left
