@@ -1,7 +1,16 @@
 ---
 title: "Second Checkpoint Presentation"
-format: revealjs
-editor: visual
+author: "Verity and Cale"
+format:
+  revealjs:
+    theme: EDA_theme.scss
+    chalkboard: true
+    smaller: true
+    slide-number: c/t
+    code-line-numbers: false
+    linestretch: 1.25
+    html-math-method:
+      method: mathjax
 ---
 
 ## Quarto
