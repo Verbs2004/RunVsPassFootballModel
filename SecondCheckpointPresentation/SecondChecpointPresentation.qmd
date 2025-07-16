@@ -28,9 +28,22 @@ format:
 ## Data
 
 * NFL play-by-play data from 2016-2023 seasons
+  <ul>
+      <li>Down, distance, quarter, yardline, score differential, time left</li>
+      <li>Formation, 'logged run rate'</li>
+  </ul>
+
+. . .
 
 * Tracking data from first 9 weeks of 2022 season
+  <ul>
+      <li>Pre-snap motion, density of formation, lineman splits</li>
+  </ul>
 
-. . . 
 
-* Down, distance, quarter, yardline, score differential, time left
+
+
+
+
+
+
