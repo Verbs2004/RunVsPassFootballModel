@@ -23,7 +23,7 @@ format:
 
 . . . 
 
-* Our goal is to build a model that predicts the likelihood of a run play given pre-snap context
+* Our goal is to build a model that predicts the likelihood of a run play given pre-snap context, then use that model to evaluate pass rushers
 
 ## Data
 
@@ -39,7 +39,32 @@ format:
   <ul>
       <li>Pre-snap motion, density of formation, lineman splits</li>
   </ul>
+  
+## Plan of Action
 
+* Completed steps
+  <ul>
+      <li>Created basic and advanced models</li>
+      <li>Evaluate pass rushers using first models</li>
+      <li>Begin to implement tracking data</li>
+  </ul>
+
+. . .
+
+* Next steps
+
+* Finalize model
+  <ul>
+      <li>Polish tracking metrics</li>
+      <li>Choose which variables should be used</li>
+  </ul>
+  
+. . .
+
+* Use final model to evaluate pass rushers
+  <ul>
+      <li>Also take into account run defense</li>
+  </ul>
 
 
 
