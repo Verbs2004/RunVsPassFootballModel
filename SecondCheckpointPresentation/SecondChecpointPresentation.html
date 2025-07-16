@@ -143,38 +143,44 @@ Verity and Cale
 <section id="predicting-offensive-play-calls-in-the-nfl" class="slide level2">
 <h2>Predicting Offensive Play Calls in the NFL</h2>
 <ul>
-<li>Accurately anticipating a run or passing play is vital for defensive play-calling</li>
+<li>Successfully anticipating whether the offense will run or pass is critical to defensive success</li>
 </ul>
 <div class="fragment">
 <ul>
-<li>The game is won through strategy, both on the field and the sidelines</li>
+<li>In the NFL, winning often comes down to preparation and play-calling — where sideline strategy is just as important as on-field performance</li>
 </ul>
 </div>
 <div class="fragment">
 <ul>
-<li>Our goal is to build a model that predicts the likelihood of a run play given pre-snap context, then use that model to evaluate pass rushers</li>
+<li>Our goal is to build a model that predicts the likelihood of a run play based on pre-snap context — and then use that model to evaluate pass rushers through their ability to generate pressure in unexpected passing situations</li>
 </ul>
 </div>
 </section>
 <section id="data" class="slide level2">
 <h2>Data</h2>
 <ul>
-<li>NFL play-by-play data from 2016-2023 seasons
+<li>NFL play-by-play data (2016-2023):
 <ul>
 <li>
-Down, distance, quarter, yardline, score differential, time left
+Core situational features: down, distance, quarter, yardline, score differential, time remaining
 </li>
 <li>
-Formation, ‘logged run rate’
+Formation information and team-specific ‘logged run rate’
 </li>
 </ul></li>
 </ul>
 <div class="fragment">
 <ul>
-<li>Tracking data from first 9 weeks of 2022 season
+<li>Player tracking data (Weeks 1-9, 2022):
 <ul>
 <li>
-Pre-snap motion, density of formation, lineman splits
+Pre-snap motion indicators
+</li>
+<li>
+Formation compactness (density)
+</li>
+<li>
+Offensive line splits
 </li>
 </ul></li>
 </ul>
@@ -189,10 +195,10 @@ Pre-snap motion, density of formation, lineman splits
 Created basic and advanced models
 </li>
 <li>
-Evaluate pass rushers using first models
+Evaluated pass rushers using first models
 </li>
 <li>
-Begin to implement tracking data
+Began to implement tracking data
 </li>
 </ul></li>
 </ul>
@@ -202,20 +208,20 @@ Begin to implement tracking data
 <li><p>Finalize model</p>
 <ul>
 <li>
-<p>Polish tracking metrics</p>
+<p>Refine and validate tracking-based features</p>
 </li>
 <li>
-<p>Choose which variables should be used</p>
+<p>Select the most predictive and interpretable variables</p>
 </li>
 </ul></li>
 </ul>
 </div>
 <div class="fragment">
 <ul>
-<li>Use final model to evaluate pass rushers
+<li>Apply Model to Pass Rusher Evaluation
 <ul>
 <li>
-Also take into account run defense
+Incorporate run defense metrics for a more complete picture
 </li>
 </ul></li>
 </ul>

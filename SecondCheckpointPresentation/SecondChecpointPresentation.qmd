@@ -15,38 +15,33 @@ format:
 
 ## Predicting Offensive Play Calls in the NFL
 
-* Accurately anticipating a run or passing play is vital for defensive play-calling
+* Successfully anticipating whether the offense will run or pass is critical to defensive success
 
 . . . 
 
-* The game is won through strategy, both on the field and the sidelines
+* In the NFL, winning often comes down to preparation and play-calling — where sideline strategy is just as important as on-field performance
 
 . . . 
 
-* Our goal is to build a model that predicts the likelihood of a run play given pre-snap context, then use that model to evaluate pass rushers
+* Our goal is to build a model that predicts the likelihood of a run play based on pre-snap context — and then use that model to evaluate pass rushers through their ability to generate pressure in unexpected passing situations
 
 ## Data
 
-* NFL play-by-play data from 2016-2023 seasons
-  <ul>
-      <li>Down, distance, quarter, yardline, score differential, time left</li>
-      <li>Formation, 'logged run rate'</li>
-  </ul>
+* NFL play-by-play data (2016-2023):
+  <ul> <li>Core situational features: down, distance, quarter, yardline, score differential, time remaining</li> <li>Formation information and team-specific 'logged run rate'</li> </ul>
 
 . . .
 
-* Tracking data from first 9 weeks of 2022 season
-  <ul>
-      <li>Pre-snap motion, density of formation, lineman splits</li>
-  </ul>
+* Player tracking data (Weeks 1-9, 2022):
+  <ul> <li>Pre-snap motion indicators</li> <li>Formation compactness (density)</li> <li>Offensive line splits</li> </ul>
   
 ## Plan of Action
 
 * Completed steps
   <ul>
       <li>Created basic and advanced models</li>
-      <li>Evaluate pass rushers using first models</li>
-      <li>Begin to implement tracking data</li>
+      <li>Evaluated pass rushers using first models</li>
+      <li>Began to implement tracking data</li>
   </ul>
 
 . . .
@@ -54,17 +49,12 @@ format:
 * Next steps
 
 * Finalize model
-  <ul>
-      <li>Polish tracking metrics</li>
-      <li>Choose which variables should be used</li>
-  </ul>
+  <ul> <li>Refine and validate tracking-based features</li> <li>Select the most predictive and interpretable variables</li> </ul>
   
 . . .
 
-* Use final model to evaluate pass rushers
-  <ul>
-      <li>Also take into account run defense</li>
-  </ul>
+* Apply Model to Pass Rusher Evaluation
+  <ul> <li>Incorporate run defense metrics for a more complete picture</li> </ul>
 
 
 
