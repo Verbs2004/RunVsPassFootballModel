@@ -203,12 +203,6 @@ pbp[, run_situation := fcase(
   default = "other"
 )]
 
-situational_run_rates <- pbp[
-  !is.na(run_situation) & season < 2023,
-  .(run_rate = mean(play_type == "run", na.rm = TRUE)),
-  by = .(season, posteam, run_situation)
-]
-
 get_lagged_rate <- function(dt) {
   out <- dt[, .(posteam, season, run_situation, run_rate)]
   out[, lagged_run_rate := NA_real_]
@@ -222,6 +216,11 @@ get_lagged_rate <- function(dt) {
   }
   return(out)
 }
+
+situational_run_rates <- pbp[, .(
+  run_rate = mean(play_type == "run", na.rm = TRUE)
+), by = .(posteam, season, run_situation)]
+
 
 lagged_rates <- get_lagged_rate(situational_run_rates)
 
@@ -237,101 +236,167 @@ df_base[, run_situation := fcase(
   default = "other"
 )]
 
+situational_run_rates_weekly <- pbp[
+  !is.na(run_situation) & season >= 2018,  # include 2018 for lagging into 2019
+  .(run_rate = mean(play_type == "run", na.rm = TRUE)),
+  by = .(season, week, posteam, run_situation)
+]
+
+get_lagged_rate_weekly <- function(dt) {
+  # dt must have columns: season, week, posteam, run_situation, run_rate
+  dt <- copy(dt)
+  dt[, lagged_run_rate := NA_real_]
+  
+  # Sort for safety
+  setorder(dt, posteam, run_situation, season, week)
+  
+  # For each row, calculate lagged run rate:
+  # mean run_rate for (previous season) + (current season weeks < current week)
+  
+  dt[, lagged_run_rate := {
+    s <- season
+    w <- week
+    p <- posteam
+    rs <- run_situation
+    
+    # Get data from previous season for this team and run_situation
+    prev_season_data <- dt[posteam == p & run_situation == rs & season == (s - 1), run_rate]
+    
+    # Get data from current season but only weeks < current week
+    curr_season_prior_weeks <- dt[posteam == p & run_situation == rs & season == s & week < w, run_rate]
+    
+    # Combine and take mean (ignore NA)
+    combined <- c(prev_season_data, curr_season_prior_weeks)
+    
+    if (length(combined) == 0) {
+      NA_real_  # no prior data
+    } else {
+      mean(combined, na.rm = TRUE)
+    }
+  }, by = seq_len(nrow(dt))]
+  
+  return(dt)
+}
+
+lagged_rates_weekly <- get_lagged_rate_weekly(situational_run_rates_weekly[season %in% 2019:2023])
+
+# Make sure df_base has 'week'
+df_base[, lagged_run_rate := NA_real_]
+
+df_base[, posteam := as.character(posteam)]
+lagged_rates_weekly[, posteam := as.character(posteam)]
+
+df_base[, run_situation := as.character(run_situation)]
+lagged_rates_weekly[, run_situation := as.character(run_situation)]
+
+df_base[, season := as.integer(season)]
+lagged_rates_weekly[, season := as.integer(season)]
+
+df_base[, week := as.integer(week)]
+lagged_rates_weekly[, week := as.integer(week)]
+
+
 df_base <- merge(
   df_base, 
-  lagged_rates[, .(posteam, season, run_situation, lagged_run_rate)], 
-  by.x = c("posteam", "season", "run_situation"),
-  by.y = c("posteam", "season", "run_situation"),
+  lagged_rates_weekly[, .(posteam, season, week, run_situation, lagged_run_rate)], 
+  by = c("posteam", "season", "week", "run_situation"), 
   all.x = TRUE
 )
+
+# Keep the good version and remove the junk
+df_base[, lagged_run_rate := lagged_run_rate.y]
+df_base[, c("lagged_run_rate.x", "lagged_run_rate.y") := NULL]
+
+summary(df_base$lagged_run_rate)
+df_base[is.na(lagged_run_rate), .N]
 
 # ───────────────────────────────────────────────────────────────
 # 4) Create Modeling and Evaluation Datasets (Stripped Down)
 # ───────────────────────────────────────────────────────────────
 cat("Creating simplified modeling dataset...\n")
 
-modeling_vars <- c("season", "game_id", "play_id", "is_pass", "down", "ydstogo", "qtr", "quarter_seconds_remaining", 
-                   "yardline_100", "score_differential", "WR_off_P", "lagged_run_rate")
+modeling_vars <- c("season", "game_id", "play_id", "is_pass", "down", "ydstogo", "qtr", "quarter_seconds_remaining",
+                   "yardline_100", "score_differential", "WR_off_P", "TE_off_P", "RB_off_P", "FB_off_P", "lagged_run_rate")
 
 df_simple <- df_base[, ..modeling_vars]
 df_simple[, lagged_run_rate := fifelse(is.na(lagged_run_rate), mean(lagged_run_rate, na.rm = TRUE), lagged_run_rate)]
 df_simple <- df_simple[complete.cases(df_simple)]
-
-
-# Train/test split
-train_data <- df_simple[season < 2023]
-test_data <- df_simple[season == 2023]
-
-# Labels
-y_train <- train_data$is_pass
-y_test <- test_data$is_pass
-
-# Exclude non-numeric columns from matrix (game_id, play_id)
-train_matrix <- as.matrix(train_data[, !c("season", "is_pass", "game_id", "play_id"), with = FALSE])
-test_matrix  <- as.matrix(test_data[, !c("season", "is_pass", "game_id", "play_id"), with = FALSE])
-
-cat("Train nrows:", nrow(train_matrix), " Test nrows:", nrow(test_matrix), "\n")
-cat("Train label distribution:\n"); print(table(y_train))
-cat("Test label distribution:\n"); print(table(y_test))
-
-# Convert to DMatrix
-dtrain <- xgb.DMatrix(data = train_matrix, label = y_train)
-dtest <- xgb.DMatrix(data = test_matrix, label = y_test)
-
-# ───────────────────────────────────────────────────────────────
-# 5) Train Model
-# ───────────────────────────────────────────────────────────────
-cat("Training XGBoost model with only 7 pre-snap features...\n")
-
-params <- list(
-  objective = "binary:logistic",
-  eval_metric = "auc",
-  eta = 0.05,
-  max_depth = 4,
-  subsample = 0.8,
-  colsample_bytree = 0.8,
-  tree_method = "hist",
-  nthread = n_cores
-)
-
-watchlist <- list(train = dtrain, test = dtest)
-
-set.seed(42)
-xgb_modeldos <- xgb.train(
-  params = params,
-  data = dtrain,
-  nrounds = 500,
-  watchlist = watchlist,
-  early_stopping_rounds = 30,
-  verbose = 0
-)
-
-cat("Model trained with", xgb_modeldos$best_iteration, "trees.\n")
-
-# ───────────────────────────────────────────────────────────────
-# 6) Evaluate
-# ───────────────────────────────────────────────────────────────
-cat("Evaluating simplified model...\n")
-
-test_preds <- predict(
-  xgb_modeldos,
-  dtest,
-  iteration_range = c(0L, xgb_modeldos$best_iteration)
-)
-test_class <- as.integer(test_preds > 0.5)
-
-conf_matrix <- table(Predicted = test_class, Actual = y_test)
-accuracy <- sum(diag(conf_matrix)) / sum(conf_matrix)
-auc_val <- auc(roc(y_test, test_preds, quiet = TRUE))
-
-cat("Accuracy:", round(accuracy, 4), "\n")
-cat("AUC:", round(auc_val, 4), "\n")
-print(conf_matrix)
-
-# Optional: Feature importance
-cat("\n=== FEATURE IMPORTANCE (Top 6) ===\n")
-importance <- xgb.importance(model = xgb_modeldos)
-print(kable(importance, format = "simple"))
+# 
+# 
+# # Train/test split
+# train_data <- df_simple[season < 2023]
+# test_data <- df_simple[season == 2023]
+# 
+# # Labels
+# y_train <- train_data$is_pass
+# y_test <- test_data$is_pass
+# 
+# # Exclude non-numeric columns from matrix (game_id, play_id)
+# train_matrix <- as.matrix(train_data[, !c("season", "is_pass", "game_id", "play_id"), with = FALSE])
+# test_matrix  <- as.matrix(test_data[, !c("season", "is_pass", "game_id", "play_id"), with = FALSE])
+# 
+# cat("Train nrows:", nrow(train_matrix), " Test nrows:", nrow(test_matrix), "\n")
+# cat("Train label distribution:\n"); print(table(y_train))
+# cat("Test label distribution:\n"); print(table(y_test))
+# 
+# # Convert to DMatrix
+# dtrain <- xgb.DMatrix(data = train_matrix, label = y_train)
+# dtest <- xgb.DMatrix(data = test_matrix, label = y_test)
+# 
+# # ───────────────────────────────────────────────────────────────
+# # 5) Train Model
+# # ───────────────────────────────────────────────────────────────
+# cat("Training XGBoost model with only 7 pre-snap features...\n")
+# 
+# params <- list(
+#   objective = "binary:logistic",
+#   eval_metric = "auc",
+#   eta = 0.05,
+#   max_depth = 4,
+#   subsample = 0.8,
+#   colsample_bytree = 0.8,
+#   tree_method = "hist",
+#   nthread = n_cores
+# )
+# 
+# watchlist <- list(train = dtrain, test = dtest)
+# 
+# set.seed(42)
+# xgb_modeldos <- xgb.train(
+#   params = params,
+#   data = dtrain,
+#   nrounds = 500,
+#   watchlist = watchlist,
+#   early_stopping_rounds = 30,
+#   verbose = 0
+# )
+# 
+# cat("Model trained with", xgb_modeldos$best_iteration, "trees.\n")
+# 
+# # ───────────────────────────────────────────────────────────────
+# # 6) Evaluate
+# # ───────────────────────────────────────────────────────────────
+# cat("Evaluating simplified model...\n")
+# 
+# test_preds <- predict(
+#   xgb_modeldos,
+#   dtest,
+#   iteration_range = c(0L, xgb_modeldos$best_iteration)
+# )
+# test_class <- as.integer(test_preds > 0.5)
+# 
+# conf_matrix <- table(Predicted = test_class, Actual = y_test)
+# accuracy <- sum(diag(conf_matrix)) / sum(conf_matrix)
+# auc_val <- auc(roc(y_test, test_preds, quiet = TRUE))
+# 
+# cat("Accuracy:", round(accuracy, 4), "\n")
+# cat("AUC:", round(auc_val, 4), "\n")
+# print(conf_matrix)
+# 
+# # Optional: Feature importance
+# cat("\n=== FEATURE IMPORTANCE (Top 6) ===\n")
+# importance <- xgb.importance(model = xgb_modeldos)
+# print(kable(importance, format = "simple"))
 
 # ───────────────────────────────────────────────────────────────
 # 7) Surprisal-Weighted Evaluation Loop (2019–2023)
@@ -397,6 +462,72 @@ all_preds <- rbindlist(lapply(names(predictions_by_year), function(year) {
   return(dt)
 }))
 
+######
+
+library(pROC)
+
+roc_list <- list()
+fpr_grid <- seq(0, 1, length.out = 1000)
+tpr_matrix <- matrix(nrow = length(fpr_grid), ncol = 0)
+auc_values <- numeric()
+
+for (test_year in 2019:2023) {
+  test_data <- df_base[season == test_year]  # make sure your data is called df_base here
+  y_test <- test_data$is_pass
+  
+  pred_probs <- predictions_by_year[[as.character(test_year)]]$pred_pass_prob
+  
+  roc_obj <- roc(y_test, pred_probs, quiet = TRUE)
+  auc_values <- c(auc_values, auc(roc_obj))
+  roc_list[[as.character(test_year)]] <- roc_obj
+  
+  # Deduplicate specificities and sensitivities before interpolation
+  roc_df <- data.frame(
+    spec = roc_obj$specificities,
+    sens = roc_obj$sensitivities
+  )
+  
+  roc_df <- roc_df[order(roc_df$spec), ]
+  roc_df <- roc_df[!duplicated(roc_df$spec), ]
+  
+  interp_tpr <- approx(
+    x = roc_df$spec,
+    y = roc_df$sens,
+    xout = 1 - fpr_grid,
+    method = "linear",
+    rule = 2
+  )$y
+  
+  tpr_matrix <- cbind(tpr_matrix, interp_tpr)
+}
+
+mean_tpr <- rowMeans(tpr_matrix, na.rm = TRUE)
+mean_auc <- mean(auc_values)
+
+library(ggplot2)
+
+# Create a data frame for plotting
+roc_df <- data.frame(
+  fpr = fpr_grid,
+  tpr = mean_tpr
+)
+
+# Create the plot
+ggplot(roc_df, aes(x = fpr, y = tpr)) +
+  geom_line(color = "#1c6ef2", size = 1.2) +
+  geom_abline(intercept = 0, slope = 1, linetype = "dashed", color = "gray") +
+  labs(
+    title = "Advanced Model",
+    x = "False Positive Rate",
+    y = "True Positive Rate"
+  ) +
+  annotate("text", x = 0.65, y = 0.1,
+           label = paste("Mean AUC =", round(mean_auc, 4)),
+           hjust = 0, size = 4, color = "#1c6ef2") +
+  theme_minimal()
+
+######
+
 # Merge predictions into full df by game_id, play_id, and season
 df_base<- merge(df_base, all_preds, by = c("season", "game_id", "play_id"), all.x = TRUE, sort = FALSE)
 
@@ -429,9 +560,11 @@ evaluate_pass_rushers <- function(data_season) {
     data_season[qb_hit == 1 & !is.na(get(col)), .(gsis_id = get(col), surprisal = surprisal)]
   }))
   qb_hits_weighted <- qb_hits[, .(weighted_qb_hits = sum(surprisal, na.rm = TRUE)), by = gsis_id]
+  player_snap_counts <- def_players_long[, .(raw_pass_rush_snaps = .N), by = gsis_id]
   
   disruption_summary <- merge(player_surprisal_exposure, sacks_weighted, by = "gsis_id", all.x = TRUE)
   disruption_summary <- merge(disruption_summary, qb_hits_weighted, by = "gsis_id", all.x = TRUE)
+  disruption_summary <- merge(disruption_summary, player_snap_counts, by = "gsis_id", all.x = TRUE)
   disruption_summary[is.na(weighted_sacks), weighted_sacks := 0]
   disruption_summary[is.na(weighted_qb_hits), weighted_qb_hits := 0]
   
@@ -448,7 +581,7 @@ evaluate_pass_rushers <- function(data_season) {
   
   pass_rusher_positions <- c("DE", "DT", "EDGE", "OLB", "ILB", "LB", "NT", "DL")
   disruption_summary <- disruption_summary[position %in% pass_rusher_positions]
-  disruption_summary <- disruption_summary[weighted_pass_rush_snaps >= 100]
+  disruption_summary <- disruption_summary[raw_pass_rush_snaps >= 300]
   
   setorder(disruption_summary, -disruption_rate)
   
@@ -458,7 +591,7 @@ evaluate_pass_rushers <- function(data_season) {
     Position = position,
     Weighted_Sacks = round(weighted_sacks, 3),
     Weighted_QB_Hits = round(weighted_qb_hits, 3),
-    Weighted_Pass_Rush_Snaps = round(weighted_pass_rush_snaps, 3),
+    Pass_Rush_Snaps = raw_pass_rush_snaps,
     Disruption_Rate = round(disruption_rate, 4)
   )]
 }
@@ -470,6 +603,9 @@ for (yr in 2023) {
   print(head(res, 30))
 }
 
+season_data <- df_base[season == 2023]
+res <- evaluate_pass_rushers(season_data)
+print(dim(res))  # Should return number of rows and columns
 
 
 

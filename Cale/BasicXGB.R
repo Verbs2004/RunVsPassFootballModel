@@ -230,6 +230,59 @@ for (test_year in 2019:2023) {
   cat("Accuracy:", round(accuracy, 4), "\n")
 }
 
+######
+
+library(pROC)
+
+# Store ROC curves
+roc_list <- list()
+fpr_grid <- seq(0, 1, length.out = 1000)
+tpr_matrix <- matrix(NA, nrow = length(fpr_grid), ncol = 0)
+auc_values <- numeric()
+
+# Re-loop to extract ROC curves
+for (test_year in 2019:2023) {
+  test_data <- df_model[season == test_year]
+  y_test <- test_data$is_pass
+  pred_probs <- predictions_by_year[[as.character(test_year)]]$pred_pass_prob
+  
+  roc_obj <- roc(y_test, pred_probs, quiet = TRUE)
+  auc_values <- c(auc_values, auc(roc_obj))
+  roc_list[[as.character(test_year)]] <- roc_obj
+  
+  # Interpolate TPR at common FPR points
+  interp_tpr <- approx(roc_obj$specificities, roc_obj$sensitivities,
+                       xout = 1 - fpr_grid, method = "linear", rule = 2)$y
+  tpr_matrix <- cbind(tpr_matrix, interp_tpr)
+}
+
+# Calculate mean TPR
+mean_tpr <- rowMeans(tpr_matrix)
+mean_auc <- mean(auc_values)
+
+library(ggplot2)
+
+# Create a data frame for plotting
+roc_df <- data.frame(
+  fpr = fpr_grid,
+  tpr = mean_tpr
+)
+
+# Create the plot
+ggplot(roc_df, aes(x = fpr, y = tpr)) +
+  geom_line(color = "#1c6ef2", size = 1.2) +
+  geom_abline(intercept = 0, slope = 1, linetype = "dashed", color = "gray") +
+  labs(
+    title = "Basic Model",
+    x = "False Positive Rate",
+    y = "True Positive Rate"
+  ) +
+  annotate("text", x = 0.65, y = 0.1,
+           label = paste("Mean AUC =", round(mean_auc, 4)),
+           hjust = 0, size = 4, color = "#1c6ef2") +
+  theme_minimal()
+######
+
 # Combine all prediction tables into one
 all_preds <- rbindlist(lapply(names(predictions_by_year), function(year) {
   dt <- predictions_by_year[[year]]
@@ -271,9 +324,11 @@ evaluate_pass_rushers <- function(data_season) {
     data_season[qb_hit == 1 & !is.na(get(col)), .(gsis_id = get(col), surprisal = surprisal)]
   }))
   qb_hits_weighted <- qb_hits[, .(weighted_qb_hits = sum(surprisal, na.rm = TRUE)), by = gsis_id]
+  player_snap_counts <- def_players_long[, .(raw_pass_rush_snaps = .N), by = gsis_id]
   
   disruption_summary <- merge(player_surprisal_exposure, sacks_weighted, by = "gsis_id", all.x = TRUE)
   disruption_summary <- merge(disruption_summary, qb_hits_weighted, by = "gsis_id", all.x = TRUE)
+  disruption_summary <- merge(disruption_summary, player_snap_counts, by = "gsis_id", all.x = TRUE)
   disruption_summary[is.na(weighted_sacks), weighted_sacks := 0]
   disruption_summary[is.na(weighted_qb_hits), weighted_qb_hits := 0]
   
@@ -292,7 +347,7 @@ evaluate_pass_rushers <- function(data_season) {
   pass_rusher_positions <- c("DE", "DT", "EDGE", "OLB", "ILB", "LB", "NT", "DL")
   disruption_summary <- disruption_summary[position %in% pass_rusher_positions]
   
-  disruption_summary <- disruption_summary[weighted_pass_rush_snaps >= 100]  # Threshold to reduce noise
+  disruption_summary <- disruption_summary[raw_pass_rush_snaps >= 300]  # Threshold to reduce noise
   
   setorder(disruption_summary, -disruption_rate)
   
@@ -302,7 +357,7 @@ evaluate_pass_rushers <- function(data_season) {
     Position = position,
     Weighted_Sacks = round(weighted_sacks, 3),
     Weighted_QB_Hits = round(weighted_qb_hits, 3),
-    Weighted_Pass_Rush_Snaps = round(weighted_pass_rush_snaps, 3),
+    Pass_Rush_Snaps = raw_pass_rush_snaps,
     Disruption_Rate = round(disruption_rate, 4)
   )]
 }
