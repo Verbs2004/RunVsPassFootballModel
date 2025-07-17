@@ -207,6 +207,7 @@ Verity and Cale
 </section>
 <section id="surprisals-a-new-metric-for-pass-rusher-evaluation" class="slide level2">
 <h2>Surprisals: A New Metric for Pass Rusher Evaluation</h2>
+<div class="fragment">
 <div title="Surprisal Definition" style="font-size: 1.5em;">
 <div class="callout callout-note callout-titled callout-style-default">
 <div class="callout-body">
@@ -226,6 +227,8 @@ Verity and Cale
 </div>
 </div>
 </div>
+</div>
+<div class="fragment">
 <ul>
 <li><strong>Why Surprisal Matters:</strong>
 <ul>
@@ -234,6 +237,7 @@ Verity and Cale
 <li>Provides context-aware evaluation beyond raw statistics</li>
 </ul></li>
 </ul>
+</div>
 </section>
 <section id="applying-the-surprisal-metric" class="slide level2 smaller">
 <h2>Applying the Surprisal Metric</h2>
@@ -246,7 +250,7 @@ Verity and Cale
 <li><p><strong>For a Run Play:</strong> <span class="math display">\[ \text{Surprisal}_i = -\log(1 - P_i(\text{Pass})) \]</span></p></li>
 </ul>
 <p><em>(where <code>i</code> represents a single play)</em></p>
-</div><div class="column" style="width:50%;">
+</div><div class="column fragment" style="width:50%;">
 <p><strong>2. Aggregate for Season Totals</strong></p>
 <p>A player’s total score is the sum of the surprisal values from their specific achievements.</p>
 <ul>
@@ -257,17 +261,28 @@ Verity and Cale
 </section>
 <section id="pass-rusher-performance-surprisal-weighted-results" class="slide level2">
 <h2>Pass Rusher Performance: Surprisal-Weighted Results</h2>
+<div class="fragment">
 <h4 id="sweat-and-watt-led-the-pack">Sweat and Watt Led the Pack</h4>
-
-<img data-src="SecondChecpointPresentation_files/figure-revealjs/unnamed-chunk-1-1.png" width="960" class="r-stretch"></section>
+<div class="cell">
+<div class="cell-output-display">
+<div>
+<figure>
+<p><img data-src="SecondChecpointPresentation_files/figure-revealjs/unnamed-chunk-1-1.png" width="960"></p>
+</figure>
+</div>
+</div>
+</div>
+</div>
+</section>
 <section id="tracking-data-model-1" class="slide level2 smaller">
 <h2>Tracking Data Model</h2>
+<div class="fragment">
 <div class="columns">
 <div class="column" style="width:50%;">
 <p>This model uses player tracking data to create geometric features.</p>
 <p><strong>Ensemble Method:</strong> Predictions from our base models are fed as input features into this final model.</p>
 <p><strong>Placeholder Performance:</strong> <br> <strong>Cross-Validated AUC:</strong> ~0.85 <br> <strong>Accuracy:</strong> ~79%</p>
-</div><div class="column" style="width:50%;">
+</div><div class="column fragment" style="width:50%;">
 <p><strong>Key Features:</strong></p>
 <ul>
 <li><strong>Core Indicators:</strong>
@@ -283,24 +298,37 @@ Verity and Cale
 </ul></li>
 </ul>
 </div></div>
+</div>
 </section>
 <section id="the-predictive-ceiling-why-perfect-accuracy-is-a-myth" class="slide level2">
 <h2>The Predictive Ceiling: Why Perfect Accuracy is a Myth</h2>
+<div class="fragment">
 <p>Our model gives us a powerful edge, but a margin of unpredictability is deliberately engineered into modern football. It’s a game of wits, not just statistics.</p>
+</div>
+<div class="fragment">
 <ul>
 <li><strong>From Tactic to Philosophy</strong>
 <ul>
 <li>With the rise of the RPO, the choice is made <em>post-snap</em>. As Kessler (2025) notes, <em>“the line between a ‘run’ and a ‘pass’ is often more philosophical than tactical.”</em></li>
 </ul></li>
+</ul>
+</div>
+<div class="fragment">
+<ul>
 <li><strong>The Human Element</strong>
 <ul>
 <li>Coaches intentionally break their own data-driven tendencies, while quarterbacks can audible at the line based on the defensive look.</li>
 </ul></li>
+</ul>
+</div>
+<div class="fragment">
+<ul>
 <li><strong>The Real-World Decision</strong>
 <ul>
 <li>Ultimately, a play call is a <em>decision made under pressure, with incomplete information, based on game plan, and in response to a thinking adversary.</em></li>
 </ul></li>
 </ul>
+</div>
 </section>
 <section id="the-case-for-continuous-models" class="slide level2 smaller">
 <h2>The Case for Continuous Models?</h2>
@@ -311,7 +339,7 @@ Verity and Cale
 <li><p><strong>For Film Study:</strong> This provides a dynamic tool for coaches, allowing them to visualize exactly how pre-snap movements alter the likelihood of a run vs.&nbsp;a pass, frame-by-frame.</p></li>
 <li><p><strong>Future Work:</strong> Evolve to multi-class models (run, screen, deep pass) or regression models that predict outcomes like expected yards.</p></li>
 </ul>
-</div><div class="column" style="width:55%;">
+</div><div class="column fragment" style="width:55%;">
 <div class="quarto-figure quarto-figure-center">
 <figure>
 <p><img data-src="Case%20for%20Continuous%20Models.gif" class="quarto-figure quarto-figure-center"></p>
@@ -325,6 +353,7 @@ Verity and Cale
 </section>
 <section id="key-findings-and-implications" class="slide level2">
 <h2>Key Findings and Implications</h2>
+<div class="fragment">
 <ul>
 <li><strong>Model Performance:</strong>
 <ul>
@@ -333,6 +362,7 @@ Verity and Cale
 <li>Team and game-specific variation reveals strategic complexity</li>
 </ul></li>
 </ul>
+</div>
 <div class="fragment">
 <ul>
 <li><strong>Pass Rusher Evaluation:</strong>

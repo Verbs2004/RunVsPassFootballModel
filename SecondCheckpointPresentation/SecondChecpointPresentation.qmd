@@ -76,6 +76,8 @@ format:
 
 ## Surprisals: A New Metric for Pass Rusher Evaluation
 
+. . .
+
 ::: {.callout-note title="Surprisal Definition" style="font-size: 1.5em;"}
 Surprisal is defined as the negative logarithm of the probability of what actually happened:
 
@@ -85,6 +87,8 @@ $$
 
 This measures how "surprising" or "informative" an event is — rarer events have higher surprisal.
 :::
+
+. . .
 
 *   **Why Surprisal Matters:**
     *   Weights pass rush performance by play predictability
@@ -109,7 +113,7 @@ First, we assign a "difficulty score" to every play based on our model's predict
 *(where `i` represents a single play)*
 :::
 
-::: {.column width="50%"}
+::: {.column width="50%" .fragment}
 **2. Aggregate for Season Totals**
 
 A player's total score is the sum of the surprisal values from their specific achievements.
@@ -125,6 +129,8 @@ A player's total score is the sum of the surprisal values from their specific ac
 
 :::
 ## Pass Rusher Performance: Surprisal-Weighted Results
+
+. . .
 
 #### Sweat and Watt Led the Pack
 ```{r}
@@ -199,6 +205,8 @@ ggplot(data, aes(y = Disruption_Rate, x = Weighted_Sacks + Weighted_QB_Hits, col
 
 ## Tracking Data Model {.smaller}
 
+. . .
+
 ::: {.columns}
 
 ::: {.column width="50%"}
@@ -214,7 +222,7 @@ Predictions from our base models are fed as input features into this final model
 **Accuracy:** ~79%
 :::
 
-::: {.column width="50%"}
+::: {.column width="50%" .fragment}
 **Key Features:**
 
 *   **Core Indicators:**
@@ -231,13 +239,21 @@ Predictions from our base models are fed as input features into this final model
 :::
 ## The Predictive Ceiling: Why Perfect Accuracy is a Myth
 
+. . .
+
 Our model gives us a powerful edge, but a margin of unpredictability is deliberately engineered into modern football. It's a game of wits, not just statistics.
+
+. . .
 
 *   **From Tactic to Philosophy**
     *   With the rise of the RPO, the choice is made *post-snap*. As Kessler (2025) notes, *"the line between a 'run' and a 'pass' is often more philosophical than tactical."*
 
+. . .
+
 *   **The Human Element**
     *   Coaches intentionally break their own data-driven tendencies, while quarterbacks can audible at the line based on the defensive look.
+
+. . .
 
 *   **The Real-World Decision**
     *   Ultimately, a play call is a *decision made under pressure, with incomplete information, based on game plan, and in response to a thinking adversary.*
@@ -254,7 +270,7 @@ Our model gives us a powerful edge, but a margin of unpredictability is delibera
 *   **Future Work:** Evolve to multi-class models (run, screen, deep pass) or regression models that predict outcomes like expected yards.
 :::
 
-::: {.column width="55%"}
+::: {.column width="55%" .fragment}
 ![](Case%20for%20Continuous%20Models.gif){fig-align="center"}
 
 <br>
@@ -267,6 +283,8 @@ Source: "Exposing Coverage Tells in the Pre-Snap" by Smit Bajaj (Kaggle)
 :::
 
 ## Key Findings and Implications
+
+. . .
 
 *   **Model Performance:**
     *   Basic models achieve ~70% accuracy ceiling
