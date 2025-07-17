@@ -1,0 +1,1068 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<script src="SecondChecpointPresentation_files/libs/clipboard/clipboard.min.js"></script>
+<script src="SecondChecpointPresentation_files/libs/quarto-html/tabby.min.js"></script>
+<script src="SecondChecpointPresentation_files/libs/quarto-html/popper.min.js"></script>
+<script src="SecondChecpointPresentation_files/libs/quarto-html/tippy.umd.min.js"></script>
+<link href="SecondChecpointPresentation_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="SecondChecpointPresentation_files/libs/quarto-html/light-border.css" rel="stylesheet">
+<link href="SecondChecpointPresentation_files/libs/quarto-html/quarto-syntax-highlighting-2f5df379a58b258e96c21c0638c20c03.css" rel="stylesheet" id="quarto-text-highlighting-styles"><meta charset="utf-8">
+  <meta name="generator" content="quarto-1.6.42">
+
+  <meta name="author" content="Verity and Cale">
+  <title>Predicting Offensive Plays in the NFL</title>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui">
+  <link rel="stylesheet" href="SecondChecpointPresentation_files/libs/revealjs/dist/reset.css">
+  <link rel="stylesheet" href="SecondChecpointPresentation_files/libs/revealjs/dist/reveal.css">
+  <style>
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    ul.task-list{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+      vertical-align: middle;
+    }
+  </style>
+  <link rel="stylesheet" href="SecondChecpointPresentation_files/libs/revealjs/dist/theme/quarto-9a3c87c1bdf98f6143522a334af1250e.css">
+  <link href="SecondChecpointPresentation_files/libs/revealjs/plugin/quarto-line-highlight/line-highlight.css" rel="stylesheet">
+  <link href="SecondChecpointPresentation_files/libs/revealjs/plugin/reveal-menu/menu.css" rel="stylesheet">
+  <link href="SecondChecpointPresentation_files/libs/revealjs/plugin/reveal-menu/quarto-menu.css" rel="stylesheet">
+  <link href="SecondChecpointPresentation_files/libs/revealjs/plugin/reveal-chalkboard/font-awesome/css/all.css" rel="stylesheet">
+  <link href="SecondChecpointPresentation_files/libs/revealjs/plugin/reveal-chalkboard/style.css" rel="stylesheet">
+  <link href="SecondChecpointPresentation_files/libs/revealjs/plugin/quarto-support/footer.css" rel="stylesheet">
+  <style type="text/css">
+    .reveal div.sourceCode {
+      margin: 0;
+      overflow: auto;
+    }
+    .reveal div.hanging-indent {
+      margin-left: 1em;
+      text-indent: -1em;
+    }
+    .reveal .slide:not(.center) {
+      height: 100%;
+    }
+    .reveal .slide.scrollable {
+      overflow-y: auto;
+    }
+    .reveal .footnotes {
+      height: 100%;
+      overflow-y: auto;
+    }
+    .reveal .slide .absolute {
+      position: absolute;
+      display: block;
+    }
+    .reveal .footnotes ol {
+      counter-reset: ol;
+      list-style-type: none; 
+      margin-left: 0;
+    }
+    .reveal .footnotes ol li:before {
+      counter-increment: ol;
+      content: counter(ol) ". "; 
+    }
+    .reveal .footnotes ol li > p:first-child {
+      display: inline-block;
+    }
+    .reveal .slide ul,
+    .reveal .slide ol {
+      margin-bottom: 0.5em;
+    }
+    .reveal .slide ul li,
+    .reveal .slide ol li {
+      margin-top: 0.4em;
+      margin-bottom: 0.2em;
+    }
+    .reveal .slide ul[role="tablist"] li {
+      margin-bottom: 0;
+    }
+    .reveal .slide ul li > *:first-child,
+    .reveal .slide ol li > *:first-child {
+      margin-block-start: 0;
+    }
+    .reveal .slide ul li > *:last-child,
+    .reveal .slide ol li > *:last-child {
+      margin-block-end: 0;
+    }
+    .reveal .slide .columns:nth-child(3) {
+      margin-block-start: 0.8em;
+    }
+    .reveal blockquote {
+      box-shadow: none;
+    }
+    .reveal .tippy-content>* {
+      margin-top: 0.2em;
+      margin-bottom: 0.7em;
+    }
+    .reveal .tippy-content>*:last-child {
+      margin-bottom: 0.2em;
+    }
+    .reveal .slide > img.stretch.quarto-figure-center,
+    .reveal .slide > img.r-stretch.quarto-figure-center {
+      display: block;
+      margin-left: auto;
+      margin-right: auto; 
+    }
+    .reveal .slide > img.stretch.quarto-figure-left,
+    .reveal .slide > img.r-stretch.quarto-figure-left  {
+      display: block;
+      margin-left: 0;
+      margin-right: auto; 
+    }
+    .reveal .slide > img.stretch.quarto-figure-right,
+    .reveal .slide > img.r-stretch.quarto-figure-right  {
+      display: block;
+      margin-left: auto;
+      margin-right: 0; 
+    }
+  </style>
+</head>
+<body class="quarto-light">
+  <div class="reveal">
+    <div class="slides">
+
+<section id="title-slide" class="quarto-title-block center">
+  <h1 class="title">Predicting Offensive Plays in the NFL</h1>
+
+<div class="quarto-title-authors">
+<div class="quarto-title-author">
+<div class="quarto-title-author-name">
+Verity and Cale 
+</div>
+</div>
+</div>
+
+</section>
+<section id="predicting-offensive-play-calls-in-the-nfl" class="slide level2">
+<h2>Predicting Offensive Play Calls in the NFL</h2>
+<ul>
+<li>Successfully anticipating whether the offense will run or pass is critical to defensive success.</li>
+</ul>
+<div class="fragment">
+<ul>
+<li>In the NFL, winning often comes down to preparation and play-calling — where sideline strategy is just as important as on-field performance.</li>
+</ul>
+</div>
+<div class="fragment">
+<ul>
+<li>Our goal is to build a model that predicts the likelihood of a run or pass play based on pre-snap context — and then use that model to evaluate pass rushers through their ability to generate pressure in unexpected passing situations.</li>
+</ul>
+</div>
+</section>
+<section id="data-sources" class="slide level2">
+<h2>Data Sources</h2>
+<ul>
+<li><strong>NFL play-by-play data (2016-2023):</strong>
+<ul>
+<li>Core situational features: down, distance, quarter, yardline, score differential, time remaining.</li>
+<li>Formation information and team-specific ‘logged run rate’.</li>
+</ul></li>
+</ul>
+<div class="fragment">
+<ul>
+<li><strong>Player tracking data (Weeks 1-9, 2022):</strong>
+<ul>
+<li>Pre-snap motion indicators.</li>
+<li>Formation compactness (density).</li>
+<li>Offensive line splits.</li>
+</ul></li>
+</ul>
+</div>
+</section>
+<section id="model-development-progress" class="slide level2">
+<h2>Model Development Progress</h2>
+<ul>
+<li><strong>Completed steps:</strong>
+<ul>
+<li>Created basic and advanced models using play-by-play data.</li>
+<li>Evaluated pass rushers using initial models.</li>
+<li>Began implementing tracking data features.</li>
+</ul></li>
+</ul>
+<div class="fragment">
+<ul>
+<li><strong>Current work:</strong>
+<ul>
+<li>Refining tracking-based features for enhanced prediction.</li>
+<li>Validating new feature engineering approaches.</li>
+</ul></li>
+</ul>
+</div>
+<div class="fragment">
+<ul>
+<li><strong>Next steps:</strong>
+<ul>
+<li>Finalize integrated model with tracking data.</li>
+<li>Apply comprehensive model to pass rusher evaluation.</li>
+<li>Incorporate run defense metrics for complete player assessment.</li>
+</ul></li>
+</ul>
+</div>
+</section>
+<section id="model-comparison-basic-vs-advanced" class="slide level2">
+<h2>Model Comparison: Basic vs Advanced</h2>
+<ul>
+<li><strong>Basic Model:</strong>
+<ul>
+<li>Uses core situational variables (down, distance, score, time)</li>
+<li>Achieves baseline accuracy of ~70%</li>
+<li>Limited by lack of formation and motion context</li>
+</ul></li>
+</ul>
+<div class="fragment">
+<ul>
+<li><strong>Advanced Model:</strong>
+<ul>
+<li>Incorporates formation data and team tendencies</li>
+<li>Improved accuracy through feature engineering</li>
+<li>Foundation for tracking data integration</li>
+</ul></li>
+</ul>
+</div>
+</section>
+<section id="tracking-data-model-development" class="slide level2">
+<h2>Tracking Data Model Development</h2>
+<ul>
+<li><strong>Enhanced Features from Player Tracking:</strong>
+<ul>
+<li><strong>Pre-snap Motion Indicators:</strong> Detecting shifts and movement patterns that signal play type</li>
+<li><strong>Formation Compactness:</strong> Measuring offensive line density and spacing</li>
+<li><strong>Alignment Metrics:</strong> Quantifying receiver positioning and route stem indicators</li>
+</ul></li>
+</ul>
+<div class="fragment">
+<ul>
+<li><strong>Feature Engineering Approach:</strong>
+<ul>
+<li>Converting raw coordinate data into meaningful predictive signals</li>
+<li>Temporal analysis of pre-snap player movement</li>
+<li>Integration with traditional situational variables</li>
+</ul></li>
+</ul>
+</div>
+<div class="fragment">
+<ul>
+<li><strong>Expected Improvements:</strong>
+<ul>
+<li>Target accuracy increase of 5-10 percentage points</li>
+<li>Better capture of tactical nuances missed by basic features</li>
+<li>Enhanced ability to identify surprising play calls</li>
+</ul></li>
+</ul>
+</div>
+</section>
+<section id="surprisals-a-new-metric-for-pass-rusher-evaluation" class="slide level2">
+<h2>Surprisals: A New Metric for Pass Rusher Evaluation</h2>
+<div title="Surprisal Definition" style="font-size: 1.5em;">
+<div class="callout callout-note callout-titled callout-style-default">
+<div class="callout-body">
+<div class="callout-title">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<p><strong>Surprisal Definition</strong></p>
+</div>
+<div class="callout-content">
+<p>Surprisal is defined as the negative logarithm of the probability of what actually happened:</p>
+<p><span class="math display">\[
+\text{Surprisal} = - \log \big( \text{probability of observed event} \big)
+\]</span></p>
+<p>This measures how “surprising” or “informative” an event is — rarer events have higher surprisal.</p>
+</div>
+</div>
+</div>
+</div>
+<ul>
+<li><strong>Why Surprisal Matters:</strong>
+<ul>
+<li>Weights pass rush performance by play predictability</li>
+<li>Highlights players who excel in unexpected passing situations</li>
+<li>Provides context-aware evaluation beyond raw statistics</li>
+</ul></li>
+</ul>
+</section>
+<section id="applying-the-surprisal-metric" class="slide level2">
+<h2>Applying the Surprisal Metric</h2>
+<div class="columns">
+<div class="column" style="width:50%;">
+<p><strong>1. Play-Specific Surprisal</strong></p>
+<p>The general formula is applied differently based on the actual play call:</p>
+<ul>
+<li><p><strong>For a Pass Play:</strong> <span class="math display">\[-\log(\text{Predicted Pass Probability})\]</span></p></li>
+<li><p><strong>For a Run Play:</strong> <span class="math display">\[-\log(1 - \text{Predicted Pass Probability})\]</span></p></li>
+</ul>
+</div><div class="column" style="width:50%;">
+<p><strong>2. Weighted Performance Metrics</strong></p>
+<p>We use the play’s surprisal to weight every pass-rushing outcome and normalize it by opportunity.</p>
+<ul>
+<li><p><strong>Weighted Sacks &amp; Hits:</strong> <span class="math display">\[ \text{Weighted Value} = \sum \text{Surprisal}_{\text{each play}} \]</span></p></li>
+<li><p><strong>Final Disruption Rate:</strong> <span class="math display">\[
+\text{Rate} = \frac{\text{Total Weighted Disruptions}}{\sum \text{Surprisal}_{\text{all snaps}}}
+\]</span></p></li>
+</ul>
+</div></div>
+</section>
+<section id="pass-rusher-performance-surprisal-weighted-results" class="slide level2">
+<h2>Pass Rusher Performance: Surprisal-Weighted Results</h2>
+<h4 id="sweat-and-watt-led-the-pack">Sweat and Watt Led the Pack</h4>
+
+<img data-src="SecondChecpointPresentation_files/figure-revealjs/unnamed-chunk-1-1.png" width="960" class="r-stretch"></section>
+<section id="interactive-pass-rusher-analysis-2023" class="slide level2">
+<h2>Interactive Pass Rusher Analysis (2023)</h2>
+<iframe src="interactive_player_dashboard.html" width="110%" height="600px" style="border: 1px solid #ddd;">
+</iframe>
+</section>
+<section id="interactive-team-predictability-dashboard-2023" class="slide level2">
+<h2>Interactive Team Predictability Dashboard (2023)</h2>
+<iframe src="interactive_team_dashboard_final.html" width="100%" height="550px" style="border: 1px solid #ddd;">
+</iframe>
+</section>
+<section id="tracking-data-model" class="slide level2 smaller">
+<h2>Tracking Data Model</h2>
+<div class="columns">
+<div class="column" style="width:50%;">
+<p>This model uses player tracking data to create geometric features.</p>
+<p><strong>Ensemble Method:</strong> Predictions from our base models are fed as input features into this final model.</p>
+<p><strong>Placeholder Performance:</strong> <br> <strong>Cross-Validated AUC:</strong> ~0.85 <br> <strong>Accuracy:</strong> ~79%</p>
+</div><div class="column" style="width:50%;">
+<p><strong>Key Features:</strong></p>
+<ul>
+<li><strong>Core Indicators:</strong>
+<ul>
+<li><strong>Formation Geometry:</strong> Formation width, depth, compactness, and WR spread.</li>
+<li><strong>Player Kinematics:</strong> Avg. player speed, acceleration, and density at the snap.</li>
+</ul></li>
+<li><strong>Advanced Geometry:</strong>
+<ul>
+<li><strong>Running Lane Potential:</strong> Measures defensive traffic in a target run gap. <span class="math display">\[ \text{Potential} = \sum_{d \in D} \frac{1}{\text{dist}(d, \text{lane})^2} \]</span></li>
+<li><strong>Defensive Convex Hull:</strong> Area controlled by the defensive perimeter.</li>
+<li><strong>Pitch Control (Voronoi):</strong> Ratio of field area controlled by offense vs.&nbsp;defense.</li>
+</ul></li>
+</ul>
+</div></div>
+</section>
+<section id="the-predictive-ceiling-why-perfect-accuracy-is-a-myth" class="slide level2">
+<h2>The Predictive Ceiling: Why Perfect Accuracy is a Myth</h2>
+<p>Our model gives us a powerful edge, but a margin of unpredictability is deliberately engineered into modern football. It’s a game of wits, not just statistics.</p>
+<ul>
+<li><strong>From Tactic to Philosophy</strong>
+<ul>
+<li>With the rise of the RPO, the choice is made <em>post-snap</em>. As Kessler (2025) notes, <em>“the line between a ‘run’ and a ‘pass’ is often more philosophical than tactical.”</em></li>
+</ul></li>
+<li><strong>The Human Element</strong>
+<ul>
+<li>Coaches intentionally break their own data-driven tendencies, while quarterbacks can audible at the line based on the defensive look.</li>
+</ul></li>
+<li><strong>The Real-World Decision</strong>
+<ul>
+<li>Ultimately, a play call is a <em>decision made under pressure, with incomplete information, based on game plan, and in response to a thinking adversary.</em></li>
+</ul></li>
+</ul>
+</section>
+<section id="the-case-for-continuous-models" class="slide level2 smaller">
+<h2>The Case for Continuous Models?</h2>
+<ul>
+<li><p><strong>Beyond a Binary Choice:</strong> The run/pass decision is rarely binary. Continuous probability models can capture subtle pre-snap ‘tells’—like a safety’s depth—that shift the odds in real-time. [1]</p></li>
+<li><p><strong>Exploring the “Grey Area”:</strong> This allows us to analyze the “grey area” of play-calling by quantifying how specific player movements create dynamic possibilities. [1]</p></li>
+<li><p><strong>Richer Context:</strong> The ultimate goal is to evolve beyond simple classification and towards multi-class models (run, screen, deep pass) or regression models that predict outcomes like expected yards.```</p></li>
+</ul>
+</section>
+<section class="slide level2">
+
+<h3 id="example-of-a-continuous-model">Example of a continuous model</h3>
+
+<img data-src="Case%20for%20Continuous%20Models.gif" class="quarto-figure quarto-figure-center r-stretch" style="width:85.0%"></section>
+<section id="key-findings-and-implications" class="slide level2">
+<h2>Key Findings and Implications</h2>
+<ul>
+<li><strong>Model Performance:</strong>
+<ul>
+<li>Basic models achieve ~70% accuracy ceiling</li>
+<li>Tracking data features show promise for meaningful improvements</li>
+<li>Team and game-specific variation reveals strategic complexity</li>
+</ul></li>
+</ul>
+<div class="fragment">
+<ul>
+<li><strong>Pass Rusher Evaluation:</strong>
+<ul>
+<li>Surprisal-weighted metrics provide context-aware player assessment</li>
+<li>Top performers excel in unpredictable passing situations</li>
+<li>Traditional stats miss important situational nuances</li>
+</ul></li>
+</ul>
+</div>
+<div class="fragment">
+<ul>
+<li><strong>Strategic Insights:</strong>
+<ul>
+<li>Predictability varies significantly across teams and situations</li>
+<li>Perfect prediction is theoretically impossible due to strategic adaptation</li>
+<li>Models must account for intentional unpredictability</li>
+</ul></li>
+</ul>
+</div>
+</section>
+<section id="questions" class="slide level2">
+<h2>Questions?</h2>
+<p><em>Thank you for your attention. We welcome your questions and feedback on our approach to NFL play prediction and player evaluation.</em></p>
+</section>
+<section>
+<section id="appendix-plots" class="title-slide slide level1 appendix smaller center">
+<h1>Appendix: Plots</h1>
+
+</section>
+<section id="univariate-feature-analysis" class="slide level2">
+<h2>Univariate Feature Analysis</h2>
+
+<img data-src="Univariate_AUCs_for_LogRegression1.png" style="width:70.0%" class="r-stretch quarto-figure-center"><p class="caption">Univariate AUCs for LogRegression1</p><p><em>Key insights: Down and distance remain the strongest individual predictors, but formation features show promising discriminative power.</em></p>
+</section>
+<section id="model-performance-analysis" class="slide level2">
+<h2>Model Performance Analysis</h2>
+<h3 class="smaller" id="lowest-vs-highest-accuracy-games">Lowest vs Highest Accuracy Games</h3>
+<div class="quarto-figure quarto-figure-center">
+<figure>
+<p><img data-src="LowestHighestAccuracyGames.png" style="width:70.0%"></p>
+<figcaption>Lowest vs Highest Accuracy Games</figcaption>
+</figure>
+</div>
+<h3 class="smaller" id="most-and-least-predictable-teams">Most and Least Predictable Teams</h3>
+<div class="quarto-figure quarto-figure-center">
+<figure>
+<p><img data-src="MostandLeastPredictableTeams.png" style="width:70.0%"></p>
+<figcaption>Most and Least Predictable Teams</figcaption>
+</figure>
+</div>
+</section>
+<section id="related-work" class="slide level2 smaller">
+<h2>Related Work</h2>
+<table class="caption-top">
+<colgroup>
+<col style="width: 25%">
+<col style="width: 29%">
+<col style="width: 45%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Year</th>
+<th>Study</th>
+<th>Key Angle</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>2024</td>
+<td>Chung – <em>Computer Vision + ML to Predict Offensive Play Calls in College Football</em></td>
+<td>End-to-end vision pipeline (CNN + LSTM) on NCAA broadcast film</td>
+</tr>
+<tr class="even">
+<td>2023</td>
+<td>Varadarajan – <em>Trench Chess</em></td>
+<td>Qualitative look at pre-snap “mind games”; highlights alignment &amp; motion cues</td>
+</tr>
+<tr class="odd">
+<td>2022</td>
+<td>Fernandes et al.&nbsp;– <em>Predicting Plays in the NFL</em></td>
+<td>Gradient-boosted trees on down/distance/score; ~70 % accuracy baseline</td>
+</tr>
+<tr class="even">
+<td>2022</td>
+<td>Lee, Chen &amp; Lakshman – <em>Predicting Offensive Play Types in the NFL</em></td>
+<td>Combines personnel, formation &amp; weather; logistic vs.&nbsp;XGBoost comparison</td>
+</tr>
+<tr class="odd">
+<td>2021</td>
+<td>Ota – <em>Play Type Prediction &amp; Tendency Analysis</em></td>
+<td>Hidden-Markov model captures drive-level momentum</td>
+</tr>
+<tr class="even">
+<td>2020</td>
+<td>Otting – <em>Predicting Play Calls with HMMs</em></td>
+<td>First large-scale HMM on play-by-play; stresses sequential dependencies</td>
+</tr>
+<tr class="odd">
+<td>2019</td>
+<td>Teich et al.&nbsp;– <em>NFL Play Prediction</em></td>
+<td>Random forest vs.&nbsp;neural net; shows feature engineering &gt; model complexity</td>
+</tr>
+<tr class="even">
+<td>2018</td>
+<td>Sung – <em>NFL Play Prediction Using Computer Vision</em></td>
+<td>Early attempt to extract formations from broadcast film</td>
+</tr>
+</tbody>
+</table>
+<p><em>Takeaways for our model:</em><br>
+- Tabular features alone plateau ≈ 70-75 % accuracy → need tracking/CV features.<br>
+- Sequential models (HMM, LSTM) add useful context.<br>
+- Vision work proves formations are extractable—aligns with our next-step roadmap.</p>
+</section>
+<section id="advanced-model-roc-plot" class="slide level2">
+<h2>Advanced Model ROC Plot</h2>
+
+<img data-src="AdvancedModelROCPlot.png" class="quarto-figure quarto-figure-center r-stretch" style="width:75.0%"></section>
+<section id="basic-model-roc-plot" class="slide level2">
+<h2>Basic Model ROC Plot</h2>
+
+<img data-src="BasicModelROCPlot.png" class="quarto-figure quarto-figure-center r-stretch" style="width:75.0%"></section>
+<section id="feature-importance-in-play-prediction" class="slide level2">
+<h2>Feature Importance in Play Prediction</h2>
+
+<img data-src="Feature%20Importance%20in%20Play%20Prediction.png" class="quarto-figure quarto-figure-center r-stretch" style="width:75.0%"></section>
+<section id="lagged-run-rates" class="slide level2">
+<h2>Lagged Run Rates</h2>
+
+<img data-src="Lagged%20Run%20Rates.png" class="quarto-figure quarto-figure-center r-stretch" style="width:75.0%"></section>
+<section id="lowest-vs.-highest-accuracy-games" class="slide level2">
+<h2>Lowest vs.&nbsp;Highest Accuracy Games</h2>
+
+<img data-src="LowestHighestAccuracyGames.png" class="quarto-figure quarto-figure-center r-stretch" style="width:75.0%"></section>
+<section id="mean-roc-curve" class="slide level2">
+<h2>Mean ROC Curve</h2>
+
+<img data-src="Mean%20ROC%20Curve.png" class="quarto-figure quarto-figure-center r-stretch" style="width:75.0%"></section>
+<section id="model-performance-across-years" class="slide level2">
+<h2>Model Performance Across Years</h2>
+
+<img data-src="Model%20Performance%20Across%20Years.png" class="quarto-figure quarto-figure-center r-stretch" style="width:75.0%"></section>
+<section id="model-performance-summary" class="slide level2">
+<h2>Model Performance Summary</h2>
+
+<img data-src="Model%20Performance%20Summary.png" class="quarto-figure quarto-figure-center r-stretch" style="width:75.0%"></section>
+<section id="model-performance-summary-2" class="slide level2">
+<h2>Model Performance Summary 2</h2>
+
+<img data-src="Model%20Performance%20Summary%202.png" class="quarto-figure quarto-figure-center r-stretch" style="width:75.0%"></section>
+<section id="most-and-least-predictable-teams-1" class="slide level2">
+<h2>Most and Least Predictable Teams</h2>
+
+<img data-src="MostandLeastPredictableTeams.png" class="quarto-figure quarto-figure-center r-stretch" style="width:75.0%"></section>
+<section id="pass-by-wr-count" class="slide level2">
+<h2>Pass by WR Count</h2>
+
+<img data-src="Pass%20by%20WR%20Count.png" class="quarto-figure quarto-figure-center r-stretch" style="width:75.0%"></section>
+<section id="pass-rate-by-quarter-and-time-remaining" class="slide level2">
+<h2>Pass Rate by Quarter and Time Remaining</h2>
+
+<img data-src="Pass%20Rate%20by%20Quarter%20and%20Time%20Remaining.png" class="quarto-figure quarto-figure-center r-stretch" style="width:75.0%"></section>
+<section id="pass-rate-by-field-downdistance" class="slide level2">
+<h2>Pass Rate by Field Down/Distance</h2>
+
+<img data-src="Pass%20Rate%20Field%20Down%20Distance.png" class="quarto-figure quarto-figure-center r-stretch" style="width:75.0%"></section>
+<section id="pass-rate-by-score-differential" class="slide level2">
+<h2>Pass Rate by Score Differential</h2>
+
+<img data-src="Pass%20Rate%20Score%20Differential.png" class="quarto-figure quarto-figure-center r-stretch" style="width:75.0%"></section>
+<section id="pass-rate-trends" class="slide level2">
+<h2>Pass Rate Trends</h2>
+
+<img data-src="Pass%20Rate%20Trends.png" class="quarto-figure quarto-figure-center r-stretch" style="width:75.0%"></section>
+<section id="performance-across-years" class="slide level2">
+<h2>Performance Across Years</h2>
+
+<img data-src="Performance%20Across%20Years.png" class="quarto-figure quarto-figure-center r-stretch" style="width:75.0%"></section>
+<section id="prediction-calibration" class="slide level2">
+<h2>Prediction Calibration</h2>
+
+<img data-src="Prediction%20Calibration.png" class="quarto-figure quarto-figure-center r-stretch" style="width:75.0%"></section>
+<section id="prediction-distribution-by-actual-outcomes" class="slide level2">
+<h2>Prediction Distribution by Actual Outcomes</h2>
+
+<img data-src="Prediction%20Distribution%20by%20Actual%20Outcomes.png" class="quarto-figure quarto-figure-center r-stretch" style="width:75.0%"></section>
+<section id="residuals" class="slide level2">
+<h2>Residuals</h2>
+
+<img data-src="Residuals.png" class="quarto-figure quarto-figure-center r-stretch" style="width:75.0%"></section>
+<section id="residuals-vs.-fitted-values" class="slide level2">
+<h2>Residuals vs.&nbsp;Fitted Values</h2>
+
+
+<img data-src="Residuals%20vs%20Fitted%20Values.png" class="quarto-figure quarto-figure-center r-stretch" style="width:75.0%"></section></section>
+    </div>
+  <div class="quarto-auto-generated-content" style="display: none;">
+<div class="footer footer-default">
+
+</div>
+</div></div>
+
+  <script>window.backupDefine = window.define; window.define = undefined;</script>
+  <script src="SecondChecpointPresentation_files/libs/revealjs/dist/reveal.js"></script>
+  <!-- reveal.js plugins -->
+  <script src="SecondChecpointPresentation_files/libs/revealjs/plugin/quarto-line-highlight/line-highlight.js"></script>
+  <script src="SecondChecpointPresentation_files/libs/revealjs/plugin/pdf-export/pdfexport.js"></script>
+  <script src="SecondChecpointPresentation_files/libs/revealjs/plugin/reveal-menu/menu.js"></script>
+  <script src="SecondChecpointPresentation_files/libs/revealjs/plugin/reveal-menu/quarto-menu.js"></script>
+  <script src="SecondChecpointPresentation_files/libs/revealjs/plugin/reveal-chalkboard/plugin.js"></script>
+  <script src="SecondChecpointPresentation_files/libs/revealjs/plugin/quarto-support/support.js"></script>
+  
+
+  <script src="SecondChecpointPresentation_files/libs/revealjs/plugin/notes/notes.js"></script>
+  <script src="SecondChecpointPresentation_files/libs/revealjs/plugin/search/search.js"></script>
+  <script src="SecondChecpointPresentation_files/libs/revealjs/plugin/zoom/zoom.js"></script>
+  <script src="SecondChecpointPresentation_files/libs/revealjs/plugin/math/math.js"></script>
+  <script>window.define = window.backupDefine; window.backupDefine = undefined;</script>
+
+  <script>
+
+      // Full list of configuration options available at:
+      // https://revealjs.com/config/
+      Reveal.initialize({
+'controlsAuto': true,
+'previewLinksAuto': false,
+'pdfSeparateFragments': false,
+'autoAnimateEasing': "ease",
+'autoAnimateDuration': 1,
+'autoAnimateUnmatched': true,
+'jumpToSlide': true,
+'menu': {"side":"left","useTextContentForMissingTitles":true,"markers":false,"loadIcons":false,"custom":[{"title":"Tools","icon":"<i class=\"fas fa-gear\"></i>","content":"<ul class=\"slide-menu-items\">\n<li class=\"slide-tool-item active\" data-item=\"0\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.fullscreen(event)\"><kbd>f</kbd> Fullscreen</a></li>\n<li class=\"slide-tool-item\" data-item=\"1\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.speakerMode(event)\"><kbd>s</kbd> Speaker View</a></li>\n<li class=\"slide-tool-item\" data-item=\"2\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.overview(event)\"><kbd>o</kbd> Slide Overview</a></li>\n<li class=\"slide-tool-item\" data-item=\"3\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.togglePdfExport(event)\"><kbd>e</kbd> PDF Export Mode</a></li>\n<li class=\"slide-tool-item\" data-item=\"4\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.toggleScrollView(event)\"><kbd>r</kbd> Scroll View Mode</a></li>\n<li class=\"slide-tool-item\" data-item=\"5\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.toggleChalkboard(event)\"><kbd>b</kbd> Toggle Chalkboard</a></li>\n<li class=\"slide-tool-item\" data-item=\"6\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.toggleNotesCanvas(event)\"><kbd>c</kbd> Toggle Notes Canvas</a></li>\n<li class=\"slide-tool-item\" data-item=\"7\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.downloadDrawings(event)\"><kbd>d</kbd> Download Drawings</a></li>\n<li class=\"slide-tool-item\" data-item=\"8\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.keyboardHelp(event)\"><kbd>?</kbd> Keyboard Help</a></li>\n</ul>"}],"openButton":true},
+'chalkboard': {"buttons":true},
+'smaller': true,
+ 
+        // Display controls in the bottom right corner
+        controls: false,
+
+        // Help the user learn the controls by providing hints, for example by
+        // bouncing the down arrow when they first encounter a vertical slide
+        controlsTutorial: false,
+
+        // Determines where controls appear, "edges" or "bottom-right"
+        controlsLayout: 'edges',
+
+        // Visibility rule for backwards navigation arrows; "faded", "hidden"
+        // or "visible"
+        controlsBackArrows: 'faded',
+
+        // Display a presentation progress bar
+        progress: true,
+
+        // Display the page number of the current slide
+        slideNumber: 'c/t',
+
+        // 'all', 'print', or 'speaker'
+        showSlideNumber: 'all',
+
+        // Add the current slide number to the URL hash so that reloading the
+        // page/copying the URL will return you to the same slide
+        hash: true,
+
+        // Start with 1 for the hash rather than 0
+        hashOneBasedIndex: false,
+
+        // Flags if we should monitor the hash and change slides accordingly
+        respondToHashChanges: true,
+
+        // Push each slide change to the browser history
+        history: true,
+
+        // Enable keyboard shortcuts for navigation
+        keyboard: true,
+
+        // Enable the slide overview mode
+        overview: true,
+
+        // Disables the default reveal.js slide layout (scaling and centering)
+        // so that you can use custom CSS layout
+        disableLayout: false,
+
+        // Vertical centering of slides
+        center: false,
+
+        // Enables touch navigation on devices with touch input
+        touch: true,
+
+        // Loop the presentation
+        loop: false,
+
+        // Change the presentation direction to be RTL
+        rtl: false,
+
+        // see https://revealjs.com/vertical-slides/#navigation-mode
+        navigationMode: 'linear',
+
+        // Randomizes the order of slides each time the presentation loads
+        shuffle: false,
+
+        // Turns fragments on and off globally
+        fragments: true,
+
+        // Flags whether to include the current fragment in the URL,
+        // so that reloading brings you to the same fragment position
+        fragmentInURL: false,
+
+        // Flags if the presentation is running in an embedded mode,
+        // i.e. contained within a limited portion of the screen
+        embedded: false,
+
+        // Flags if we should show a help overlay when the questionmark
+        // key is pressed
+        help: true,
+
+        // Flags if it should be possible to pause the presentation (blackout)
+        pause: true,
+
+        // Flags if speaker notes should be visible to all viewers
+        showNotes: false,
+
+        // Global override for autoplaying embedded media (null/true/false)
+        autoPlayMedia: null,
+
+        // Global override for preloading lazy-loaded iframes (null/true/false)
+        preloadIframes: null,
+
+        // Number of milliseconds between automatically proceeding to the
+        // next slide, disabled when set to 0, this value can be overwritten
+        // by using a data-autoslide attribute on your slides
+        autoSlide: 0,
+
+        // Stop auto-sliding after user input
+        autoSlideStoppable: true,
+
+        // Use this method for navigation when auto-sliding
+        autoSlideMethod: null,
+
+        // Specify the average time in seconds that you think you will spend
+        // presenting each slide. This is used to show a pacing timer in the
+        // speaker view
+        defaultTiming: null,
+
+        // Enable slide navigation via mouse wheel
+        mouseWheel: false,
+
+        // The display mode that will be used to show slides
+        display: 'block',
+
+        // Hide cursor if inactive
+        hideInactiveCursor: true,
+
+        // Time before the cursor is hidden (in ms)
+        hideCursorTime: 5000,
+
+        // Opens links in an iframe preview overlay
+        previewLinks: false,
+
+        // Transition style (none/fade/slide/convex/concave/zoom)
+        transition: 'none',
+
+        // Transition speed (default/fast/slow)
+        transitionSpeed: 'default',
+
+        // Transition style for full page slide backgrounds
+        // (none/fade/slide/convex/concave/zoom)
+        backgroundTransition: 'none',
+
+        // Number of slides away from the current that are visible
+        viewDistance: 3,
+
+        // Number of slides away from the current that are visible on mobile
+        // devices. It is advisable to set this to a lower number than
+        // viewDistance in order to save resources.
+        mobileViewDistance: 2,
+
+        // The "normal" size of the presentation, aspect ratio will be preserved
+        // when the presentation is scaled to fit different resolutions. Can be
+        // specified using percentage units.
+        width: 1050,
+
+        height: 700,
+
+        // Factor of the display size that should remain empty around the content
+        margin: 0.1,
+
+        math: {
+          mathjax: 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.9/MathJax.js',
+          config: 'TeX-AMS_HTML-full',
+          tex2jax: {
+            inlineMath: [['\\(','\\)']],
+            displayMath: [['\\[','\\]']],
+            balanceBraces: true,
+            processEscapes: false,
+            processRefs: true,
+            processEnvironments: true,
+            preview: 'TeX',
+            skipTags: ['script','noscript','style','textarea','pre','code'],
+            ignoreClass: 'tex2jax_ignore',
+            processClass: 'tex2jax_process'
+          },
+        },
+
+        // reveal.js plugins
+        plugins: [QuartoLineHighlight, PdfExport, RevealMenu, RevealChalkboard, QuartoSupport,
+
+          RevealMath,
+          RevealNotes,
+          RevealSearch,
+          RevealZoom
+        ]
+      });
+    </script>
+    
+
+    <script>
+
+      // htmlwidgets need to know to resize themselves when slides are shown/hidden.
+
+      // Fire the "slideenter" event (handled by htmlwidgets.js) when the current
+
+      // slide changes (different for each slide format).
+
+      (function () {
+
+        // dispatch for htmlwidgets
+
+        function fireSlideEnter() {
+
+          const event = window.document.createEvent("Event");
+
+          event.initEvent("slideenter", true, true);
+
+          window.document.dispatchEvent(event);
+
+        }
+
+    
+
+        function fireSlideChanged(previousSlide, currentSlide) {
+
+          fireSlideEnter();
+
+    
+
+          // dispatch for shiny
+
+          if (window.jQuery) {
+
+            if (previousSlide) {
+
+              window.jQuery(previousSlide).trigger("hidden");
+
+            }
+
+            if (currentSlide) {
+
+              window.jQuery(currentSlide).trigger("shown");
+
+            }
+
+          }
+
+        }
+
+    
+
+        // hookup for slidy
+
+        if (window.w3c_slidy) {
+
+          window.w3c_slidy.add_observer(function (slide_num) {
+
+            // slide_num starts at position 1
+
+            fireSlideChanged(null, w3c_slidy.slides[slide_num - 1]);
+
+          });
+
+        }
+
+    
+
+      })();
+
+    </script>
+
+    
+
+    <script id="quarto-html-after-body" type="application/javascript">
+    window.document.addEventListener("DOMContentLoaded", function (event) {
+      const toggleBodyColorMode = (bsSheetEl) => {
+        const mode = bsSheetEl.getAttribute("data-mode");
+        const bodyEl = window.document.querySelector("body");
+        if (mode === "dark") {
+          bodyEl.classList.add("quarto-dark");
+          bodyEl.classList.remove("quarto-light");
+        } else {
+          bodyEl.classList.add("quarto-light");
+          bodyEl.classList.remove("quarto-dark");
+        }
+      }
+      const toggleBodyColorPrimary = () => {
+        const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+        if (bsSheetEl) {
+          toggleBodyColorMode(bsSheetEl);
+        }
+      }
+      toggleBodyColorPrimary();  
+      const tabsets =  window.document.querySelectorAll(".panel-tabset-tabby")
+      tabsets.forEach(function(tabset) {
+        const tabby = new Tabby('#' + tabset.id);
+      });
+      const isCodeAnnotation = (el) => {
+        for (const clz of el.classList) {
+          if (clz.startsWith('code-annotation-')) {                     
+            return true;
+          }
+        }
+        return false;
+      }
+      const onCopySuccess = function(e) {
+        // button target
+        const button = e.trigger;
+        // don't keep focus
+        button.blur();
+        // flash "checked"
+        button.classList.add('code-copy-button-checked');
+        var currentTitle = button.getAttribute("title");
+        button.setAttribute("title", "Copied!");
+        let tooltip;
+        if (window.bootstrap) {
+          button.setAttribute("data-bs-toggle", "tooltip");
+          button.setAttribute("data-bs-placement", "left");
+          button.setAttribute("data-bs-title", "Copied!");
+          tooltip = new bootstrap.Tooltip(button, 
+            { trigger: "manual", 
+              customClass: "code-copy-button-tooltip",
+              offset: [0, -8]});
+          tooltip.show();    
+        }
+        setTimeout(function() {
+          if (tooltip) {
+            tooltip.hide();
+            button.removeAttribute("data-bs-title");
+            button.removeAttribute("data-bs-toggle");
+            button.removeAttribute("data-bs-placement");
+          }
+          button.setAttribute("title", currentTitle);
+          button.classList.remove('code-copy-button-checked');
+        }, 1000);
+        // clear code selection
+        e.clearSelection();
+      }
+      const getTextToCopy = function(trigger) {
+          const codeEl = trigger.previousElementSibling.cloneNode(true);
+          for (const childEl of codeEl.children) {
+            if (isCodeAnnotation(childEl)) {
+              childEl.remove();
+            }
+          }
+          return codeEl.innerText;
+      }
+      const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+        text: getTextToCopy
+      });
+      clipboard.on('success', onCopySuccess);
+      if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+        const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+          text: getTextToCopy,
+          container: window.document.getElementById('quarto-embedded-source-code-modal')
+        });
+        clipboardModal.on('success', onCopySuccess);
+      }
+        var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+        var mailtoRegex = new RegExp(/^mailto:/);
+          var filterRegex = new RegExp('/' + window.location.host + '/');
+        var isInternal = (href) => {
+            return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+        }
+        // Inspect non-navigation links and adorn them if external
+     	var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+        for (var i=0; i<links.length; i++) {
+          const link = links[i];
+          if (!isInternal(link.href)) {
+            // undo the damage that might have been done by quarto-nav.js in the case of
+            // links that we want to consider external
+            if (link.dataset.originalHref !== undefined) {
+              link.href = link.dataset.originalHref;
+            }
+          }
+        }
+      function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+        const config = {
+          allowHTML: true,
+          maxWidth: 500,
+          delay: 100,
+          arrow: false,
+          appendTo: function(el) {
+              return el.closest('section.slide') || el.parentElement;
+          },
+          interactive: true,
+          interactiveBorder: 10,
+          theme: 'light-border',
+          placement: 'bottom-start',
+        };
+        if (contentFn) {
+          config.content = contentFn;
+        }
+        if (onTriggerFn) {
+          config.onTrigger = onTriggerFn;
+        }
+        if (onUntriggerFn) {
+          config.onUntrigger = onUntriggerFn;
+        }
+          config['offset'] = [0,0];
+          config['maxWidth'] = 700;
+        window.tippy(el, config); 
+      }
+      const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+      for (var i=0; i<noterefs.length; i++) {
+        const ref = noterefs[i];
+        tippyHover(ref, function() {
+          // use id or data attribute instead here
+          let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+          try { href = new URL(href).hash; } catch {}
+          const id = href.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note) {
+            return note.innerHTML;
+          } else {
+            return "";
+          }
+        });
+      }
+      const findCites = (el) => {
+        const parentEl = el.parentElement;
+        if (parentEl) {
+          const cites = parentEl.dataset.cites;
+          if (cites) {
+            return {
+              el,
+              cites: cites.split(' ')
+            };
+          } else {
+            return findCites(el.parentElement)
+          }
+        } else {
+          return undefined;
+        }
+      };
+      var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+      for (var i=0; i<bibliorefs.length; i++) {
+        const ref = bibliorefs[i];
+        const citeInfo = findCites(ref);
+        if (citeInfo) {
+          tippyHover(citeInfo.el, function() {
+            var popup = window.document.createElement('div');
+            citeInfo.cites.forEach(function(cite) {
+              var citeDiv = window.document.createElement('div');
+              citeDiv.classList.add('hanging-indent');
+              citeDiv.classList.add('csl-entry');
+              var biblioDiv = window.document.getElementById('ref-' + cite);
+              if (biblioDiv) {
+                citeDiv.innerHTML = biblioDiv.innerHTML;
+              }
+              popup.appendChild(citeDiv);
+            });
+            return popup.innerHTML;
+          });
+        }
+      }
+    });
+    </script>
+    
+
+</body></html>

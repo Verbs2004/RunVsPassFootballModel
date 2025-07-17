@@ -1,0 +1,447 @@
+---
+title: "Predicting Offensive Plays in the NFL"
+author: "Verity and Cale"
+format:
+  revealjs:
+    theme: EDA_theme.scss
+    chalkboard: true
+    smaller: true
+    slide-number: c/t
+    code-line-numbers: false
+    linestretch: 1.25
+    html-math-method:
+      method: mathjax
+---
+
+## Predicting Offensive Play Calls in the NFL
+
+*   Successfully anticipating whether the offense will run or pass is critical to defensive success.
+
+. . .
+
+*   In the NFL, winning often comes down to preparation and play-calling — where sideline strategy is just as important as on-field performance.
+
+. . .
+
+*   Our goal is to build a model that predicts the likelihood of a run or pass play based on pre-snap context — and then use that model to evaluate pass rushers through their ability to generate pressure in unexpected passing situations.
+
+## Data Sources
+
+*   **NFL play-by-play data (2016-2023):**
+    *   Core situational features: down, distance, quarter, yardline, score differential, time remaining.
+    *   Formation information and team-specific 'logged run rate'.
+
+. . .
+
+*   **Player tracking data (Weeks 1-9, 2022):**
+    *   Pre-snap motion indicators.
+    *   Formation compactness (density).
+    *   Offensive line splits.
+
+
+## Model Development Progress
+
+*   **Completed steps:**
+    *   Created basic and advanced models using play-by-play data.
+    *   Evaluated pass rushers using initial models.
+    *   Began implementing tracking data features.
+
+. . .
+
+*   **Current work:**
+    *   Refining tracking-based features for enhanced prediction.
+    *   Validating new feature engineering approaches.
+
+. . .
+
+*   **Next steps:**
+    *   Finalize integrated model with tracking data.
+    *   Apply comprehensive model to pass rusher evaluation.
+    *   Incorporate run defense metrics for complete player assessment.
+
+## Model Comparison: Basic vs Advanced
+
+*   **Basic Model:**
+    *   Uses core situational variables (down, distance, score, time)
+    *   Achieves baseline accuracy of ~70%
+    *   Limited by lack of formation and motion context
+
+. . .
+
+*   **Advanced Model:**
+    *   Incorporates formation data and team tendencies
+    *   Improved accuracy through feature engineering
+    *   Foundation for tracking data integration
+
+## Tracking Data Model Development
+
+*   **Enhanced Features from Player Tracking:**
+    *   **Pre-snap Motion Indicators:** Detecting shifts and movement patterns that signal play type
+    *   **Formation Compactness:** Measuring offensive line density and spacing
+    *   **Alignment Metrics:** Quantifying receiver positioning and route stem indicators
+
+. . .
+
+*   **Feature Engineering Approach:**
+    *   Converting raw coordinate data into meaningful predictive signals
+    *   Temporal analysis of pre-snap player movement
+    *   Integration with traditional situational variables
+
+. . .
+
+*   **Expected Improvements:**
+    *   Target accuracy increase of 5-10 percentage points
+    *   Better capture of tactical nuances missed by basic features
+    *   Enhanced ability to identify surprising play calls
+
+
+## Surprisals: A New Metric for Pass Rusher Evaluation
+
+::: {.callout-note title="Surprisal Definition" style="font-size: 1.5em;"}
+Surprisal is defined as the negative logarithm of the probability of what actually happened:
+
+$$
+\text{Surprisal} = - \log \big( \text{probability of observed event} \big)
+$$
+
+This measures how "surprising" or "informative" an event is — rarer events have higher surprisal.
+:::
+
+*   **Why Surprisal Matters:**
+    *   Weights pass rush performance by play predictability
+    *   Highlights players who excel in unexpected passing situations
+    *   Provides context-aware evaluation beyond raw statistics
+
+## Applying the Surprisal Metric
+
+::: {.columns}
+
+::: {.column width="50%"}
+**1. Play-Specific Surprisal**
+
+The general formula is applied differently based on the actual play call:
+
+*   **For a Pass Play:**
+    $$-\log(\text{Predicted Pass Probability})$$
+
+*   **For a Run Play:**
+    $$-\log(1 - \text{Predicted Pass Probability})$$
+
+:::
+
+::: {.column width="50%"}
+**2. Weighted Performance Metrics**
+
+We use the play's surprisal to weight every pass-rushing outcome and normalize it by opportunity.
+
+*   **Weighted Sacks & Hits:**
+    $$ \text{Weighted Value} = \sum \text{Surprisal}_{\text{each play}} $$
+
+*   **Final Disruption Rate:**
+    $$
+    \text{Rate} = \frac{\text{Total Weighted Disruptions}}{\sum \text{Surprisal}_{\text{all snaps}}}
+    $$
+:::
+
+:::
+
+## Pass Rusher Performance: Surprisal-Weighted Results
+
+#### Sweat and Watt Led the Pack
+```{r}
+
+library(ggplot2)
+library(data.table)
+library(ggrepel)
+
+# Load the updated data
+data <- fread("
+Player,Team,Position,Weighted_Sacks,Weighted_QB_Hits,Pass_Rush_Snaps,Disruption_Rate
+Montez Sweat,CHI,DL,6.695,13.004,610,0.0592
+Marcus Davenport,MIN,LB,0.99,2.385,111,0.0559
+T.J. Watt,PIT,LB,7.501,16.702,801,0.0546
+Nik Bonitto,DEN,LB,4.376,8.561,440,0.0542
+Derek Barnett,HOU,DL,1.272,6.824,257,0.0525
+Josh Allen,JAX,LB,6.953,11.648,692,0.0511
+Dante Fowler Jr.,DAL,DL,1.988,3.72,230,0.0507
+Jonathan Greenard,HOU,DL,7.127,10.8,650,0.0484
+Nick Bosa,SF,DL,4.5,19.021,925,0.0473
+Lukas Van Ness,GB,LB,3.321,7.205,377,0.0466
+Clelin Ferrell,SF,DL,2.88,8.561,424,0.0463
+Leonard Floyd,BUF,DL,4.504,9.118,534,0.0453
+Brent Urban,BAL,DL,2.487,4.697,241,0.045
+Yetur Gross-Matos,CAR,LB,1.956,4.878,280,0.0435
+Matt Judon,NE,LB,0.354,3.71,173,0.043
+Markus Golden,PIT,LB,1.543,3.217,187,0.0418
+Haason Reddick,PHI,LB,5.748,11.996,782,0.0415
+Felix Anudike-Uzomah,KC,DL,0,2.91,155,0.0413
+Samson Ebukam,IND,DL,3.521,8.204,557,0.0407
+Adetomiwa Adebawore,IND,DL,0.046,2.821,113,0.0407
+Tyquan Lewis,IND,DL,1.764,5.857,336,0.0406
+Justin Madubuike,BAL,DL,2.917,11.72,733,0.0403
+Greg Rousseau,BUF,DL,1.882,10.567,549,0.0395
+Trey Hendrickson,CIN,DL,5.223,8.339,649,0.0392
+Danielle Hunter,MIN,LB,7.745,11.108,840,0.0388
+Joseph Ossai,CIN,DL,0.247,2.428,136,0.0383
+Grover Stewart,IND,DL,0,6.797,304,0.038
+Quinton Jefferson,NYJ,DL,2.308,7.411,441,0.038
+Bryce Huff,NYJ,DL,2.664,5.449,394,0.038
+Anthony Nelson,TB,LB,2.429,4.378,347,0.0373
+")
+
+# Create abbreviated label: first initial + last name
+# Handle middle names by only taking first letter of first name + last word as last name
+data[, Label := {
+  parts <- strsplit(Player, " ")[[1]]
+  if(length(parts) == 1) {
+    Player
+  } else {
+    first_initial <- substr(parts[1], 1, 1)
+    last_names <- paste(parts[-1], collapse = " ")
+    paste0(first_initial, ". ", last_names)
+  }
+}, by = Player]
+
+# Plot
+ggplot(data, aes(y = Disruption_Rate, x = Weighted_Sacks + Weighted_QB_Hits, color = Pass_Rush_Snaps)) +
+  geom_point(size = 3) +
+  geom_text_repel(aes(label = Label), size = 3) +
+  scale_color_viridis_c(option = "viridis", name = "Snaps") +
+  labs(
+    title = "Surprisal-Weighted Pass Rushers (2023)",
+    x = "Weighted Sacks + QB Hits",
+    y = "Disruption Rate"
+  ) +
+  theme_minimal()
+```
+
+
+
+
+## Interactive Pass Rusher Analysis (2023)
+<iframe src="interactive_player_dashboard.html" width="110%" height="600px" style="border: 1px solid #ddd;"></iframe>
+
+## Interactive Team Predictability Dashboard (2023)
+<iframe src="interactive_team_dashboard_final.html" width="100%" height="550px" style="border: 1px solid #ddd;"></iframe>
+
+## Tracking Data Model {.smaller}
+
+::: {.columns}
+
+::: {.column width="50%"}
+This model uses player tracking data to create geometric features.
+
+**Ensemble Method:**
+Predictions from our base models are fed as input features into this final model.
+
+**Placeholder Performance:**
+<br>
+**Cross-Validated AUC:** ~0.85
+<br>
+**Accuracy:** ~79%
+:::
+
+::: {.column width="50%"}
+**Key Features:**
+
+*   **Core Indicators:**
+    *   **Formation Geometry:** Formation width, depth, compactness, and WR spread.
+    *   **Player Kinematics:** Avg. player speed, acceleration, and density at the snap.
+
+*   **Advanced Geometry:**
+    *   **Running Lane Potential:** Measures defensive traffic in a target run gap.
+        $$ \text{Potential} = \sum_{d \in D} \frac{1}{\text{dist}(d, \text{lane})^2} $$
+    *   **Defensive Convex Hull:** Area controlled by the defensive perimeter.
+    *   **Pitch Control (Voronoi):** Ratio of field area controlled by offense vs. defense.
+:::
+
+:::
+## The Predictive Ceiling: Why Perfect Accuracy is a Myth
+
+Our model gives us a powerful edge, but a margin of unpredictability is deliberately engineered into modern football. It's a game of wits, not just statistics.
+
+*   **From Tactic to Philosophy**
+    *   With the rise of the RPO, the choice is made *post-snap*. As Kessler (2025) notes, *"the line between a 'run' and a 'pass' is often more philosophical than tactical."*
+
+*   **The Human Element**
+    *   Coaches intentionally break their own data-driven tendencies, while quarterbacks can audible at the line based on the defensive look.
+
+*   **The Real-World Decision**
+    *   Ultimately, a play call is a *decision made under pressure, with incomplete information, based on game plan, and in response to a thinking adversary.*
+
+## The Case for Continuous Models? {.smaller}
+
+*   **Beyond a Binary Choice:** The run/pass decision is rarely binary. Continuous probability models can capture subtle pre-snap 'tells'—like a safety's depth—that shift the odds in real-time. [1]
+
+*   **Exploring the "Grey Area":** This allows us to analyze the "grey area" of play-calling by quantifying how specific player movements create dynamic possibilities. [1]
+
+*   **Richer Context:** The ultimate goal is to evolve beyond simple classification and towards multi-class models (run, screen, deep pass) or regression models that predict outcomes like expected yards.```
+
+---
+
+### Example of a continuous model
+
+![](Case%20for%20Continuous%20Models.gif){fig-align="center" width="85%"}
+
+## Key Findings and Implications
+
+*   **Model Performance:**
+    *   Basic models achieve ~70% accuracy ceiling
+    *   Tracking data features show promise for meaningful improvements
+    *   Team and game-specific variation reveals strategic complexity
+
+. . .
+
+*   **Pass Rusher Evaluation:**
+    *   Surprisal-weighted metrics provide context-aware player assessment
+    *   Top performers excel in unpredictable passing situations
+    *   Traditional stats miss important situational nuances
+
+. . .
+
+*   **Strategic Insights:**
+    *   Predictability varies significantly across teams and situations
+    *   Perfect prediction is theoretically impossible due to strategic adaptation
+    *   Models must account for intentional unpredictability
+
+## Questions?
+
+*Thank you for your attention. We welcome your questions and feedback on our approach to NFL play prediction and player evaluation.*
+
+# Appendix: Plots {.appendix .smaller}
+
+## Univariate Feature Analysis
+
+![Univariate AUCs for LogRegression1](Univariate_AUCs_for_LogRegression1.png){width=70%}
+
+*Key insights: Down and distance remain the strongest individual predictors, but formation features show promising discriminative power.*
+
+## Model Performance Analysis
+
+### Lowest vs Highest Accuracy Games {.smaller}
+
+![Lowest vs Highest Accuracy Games](LowestHighestAccuracyGames.png){width=70%}
+
+### Most and Least Predictable Teams {.smaller}
+
+![Most and Least Predictable Teams](MostandLeastPredictableTeams.png){width=70%}
+
+## Related Work {.smaller}
+
+| Year | Study | Key Angle |
+|------|-------|-----------|
+| 2024 | Chung – *Computer Vision + ML to Predict Offensive Play Calls in College Football* | End-to-end vision pipeline (CNN + LSTM) on NCAA broadcast film |
+| 2023 | Varadarajan – *Trench Chess* | Qualitative look at pre-snap "mind games"; highlights alignment & motion cues |
+| 2022 | Fernandes et al. – *Predicting Plays in the NFL* | Gradient-boosted trees on down/distance/score; ~70 % accuracy baseline |
+| 2022 | Lee, Chen & Lakshman – *Predicting Offensive Play Types in the NFL* | Combines personnel, formation & weather; logistic vs. XGBoost comparison |
+| 2021 | Ota – *Play Type Prediction & Tendency Analysis* | Hidden-Markov model captures drive-level momentum |
+| 2020 | Otting – *Predicting Play Calls with HMMs* | First large-scale HMM on play-by-play; stresses sequential dependencies |
+| 2019 | Teich et al. – *NFL Play Prediction* | Random forest vs. neural net; shows feature engineering > model complexity |
+| 2018 | Sung – *NFL Play Prediction Using Computer Vision* | Early attempt to extract formations from broadcast film |
+
+*Takeaways for our model:*  
+- Tabular features alone plateau ≈ 70-75 % accuracy → need tracking/CV features.  
+- Sequential models (HMM, LSTM) add useful context.  
+- Vision work proves formations are extractable—aligns with our next-step roadmap.
+
+
+---
+
+## Advanced Model ROC Plot
+![](AdvancedModelROCPlot.png){fig-align="center" width="75%"}
+
+---
+
+## Basic Model ROC Plot
+![](BasicModelROCPlot.png){fig-align="center" width="75%"}
+
+---
+
+## Feature Importance in Play Prediction
+![](Feature%20Importance%20in%20Play%20Prediction.png){fig-align="center" width="75%"}
+
+---
+
+## Lagged Run Rates
+![](Lagged%20Run%20Rates.png){fig-align="center" width="75%"}
+
+---
+
+## Lowest vs. Highest Accuracy Games
+![](LowestHighestAccuracyGames.png){fig-align="center" width="75%"}
+
+---
+
+## Mean ROC Curve
+![](Mean%20ROC%20Curve.png){fig-align="center" width="75%"}
+
+---
+
+## Model Performance Across Years
+![](Model%20Performance%20Across%20Years.png){fig-align="center" width="75%"}
+
+---
+
+## Model Performance Summary
+![](Model%20Performance%20Summary.png){fig-align="center" width="75%"}
+
+---
+
+## Model Performance Summary 2
+![](Model%20Performance%20Summary%202.png){fig-align="center" width="75%"}
+
+---
+
+## Most and Least Predictable Teams
+![](MostandLeastPredictableTeams.png){fig-align="center" width="75%"}
+
+---
+
+## Pass by WR Count
+![](Pass%20by%20WR%20Count.png){fig-align="center" width="75%"}
+
+---
+
+## Pass Rate by Quarter and Time Remaining
+![](Pass%20Rate%20by%20Quarter%20and%20Time%20Remaining.png){fig-align="center" width="75%"}
+
+---
+
+## Pass Rate by Field Down/Distance
+![](Pass%20Rate%20Field%20Down%20Distance.png){fig-align="center" width="75%"}
+
+---
+
+## Pass Rate by Score Differential
+![](Pass%20Rate%20Score%20Differential.png){fig-align="center" width="75%"}
+
+---
+
+## Pass Rate Trends
+![](Pass%20Rate%20Trends.png){fig-align="center" width="75%"}
+
+---
+
+## Performance Across Years
+![](Performance%20Across%20Years.png){fig-align="center" width="75%"}
+
+---
+
+## Prediction Calibration
+![](Prediction%20Calibration.png){fig-align="center" width="75%"}
+
+---
+
+## Prediction Distribution by Actual Outcomes
+![](Prediction%20Distribution%20by%20Actual%20Outcomes.png){fig-align="center" width="75%"}
+
+---
+
+## Residuals
+![](Residuals.png){fig-align="center" width="75%"}
+
+---
+
+## Residuals vs. Fitted Values
+![](Residuals%20vs%20Fitted%20Values.png){fig-align="center" width="75%"}
+
