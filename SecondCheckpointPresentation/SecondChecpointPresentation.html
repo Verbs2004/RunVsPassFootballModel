@@ -140,8 +140,8 @@ Verity and Cale
 </div>
 
 </section>
-<section id="predicting-offensive-play-calls-in-the-nfl" class="slide level2">
-<h2>Predicting Offensive Play Calls in the NFL</h2>
+<section id="initial-motivation-and-goal" class="slide level2">
+<h2>Initial Motivation and Goal</h2>
 <ul>
 <li>Successfully anticipating whether the offense will run or pass is critical to defensive success.</li>
 </ul>
@@ -159,104 +159,51 @@ Verity and Cale
 <section id="data-sources" class="slide level2">
 <h2>Data Sources</h2>
 <ul>
-<li><strong>NFL play-by-play data (2016-2023):</strong>
+<li><strong>NFL Play-by-Play Data (2016-2023):</strong>
 <ul>
 <li>Core situational features: down, distance, quarter, yardline, score differential, time remaining.</li>
-<li>Formation information and team-specific ‘logged run rate’.</li>
+<li>Formation information and team-specific ‘lagged run rate’.</li>
 </ul></li>
 </ul>
 <div class="fragment">
 <ul>
-<li><strong>Player tracking data (Weeks 1-9, 2022):</strong>
+<li><strong>Player Tracking Data (2022):</strong>
 <ul>
-<li>Pre-snap motion indicators.</li>
-<li>Formation compactness (density).</li>
-<li>Offensive line splits.</li>
+<li><strong>Positional Data:</strong> Provides the (x, y) coordinates for all 22 players and the ball on every frame of a play.</li>
+<li><strong>Player Kinematics:</strong> Includes each player’s speed, acceleration, orientation, and direction of motion.</li>
+<li><strong>Event Timestamps:</strong> Contains crucial event tags within each play, such as <code>ball_snap</code>, <code>pass_release</code>, and <code>tackle</code>.</li>
 </ul></li>
 </ul>
 </div>
 </section>
-<section id="model-development-progress" class="slide level2">
-<h2>Model Development Progress</h2>
+<section id="our-iterative-modeling-approach" class="slide level2 smaller">
+<h2>Our Iterative Modeling Approach</h2>
+<div class="columns">
+<div class="column" style="width:33%;">
+<h3 id="basic-model">1. Basic Model</h3>
+<p><strong>(Situational)</strong></p>
 <ul>
-<li><strong>Completed steps:</strong>
-<ul>
-<li>Created basic and advanced models using play-by-play data.</li>
-<li>Evaluated pass rushers using initial models.</li>
-<li>Began implementing tracking data features.</li>
-</ul></li>
+<li><strong>Features:</strong> Core variables like down, distance, score, and time.</li>
+<li><strong>Performance:</strong> Achieves a ~70% accuracy baseline.</li>
+<li><strong>Limitation:</strong> Lacks crucial formation and pre-snap motion context.</li>
 </ul>
-<div class="fragment">
+</div><div class="column" style="width:33%;">
+<h3 id="advanced-model">2. Advanced Model</h3>
+<p><strong>(Personnel)</strong></p>
 <ul>
-<li><strong>Current work:</strong>
-<ul>
-<li>Refining tracking-based features for enhanced prediction.</li>
-<li>Validating new feature engineering approaches.</li>
-</ul></li>
+<li><strong>Features:</strong> Incorporates formation data and team-specific tendencies.</li>
+<li><strong>Performance:</strong> Improves accuracy through targeted feature engineering.</li>
+<li><strong>Role:</strong> Acts as a stronger foundation for tracking data integration.</li>
 </ul>
-</div>
-<div class="fragment">
+</div><div class="column" style="width:33%;">
+<h3 id="tracking-data-model">3. Tracking Data Model</h3>
+<p><strong>(Geometric)</strong></p>
 <ul>
-<li><strong>Next steps:</strong>
-<ul>
-<li>Finalize integrated model with tracking data.</li>
-<li>Apply comprehensive model to pass rusher evaluation.</li>
-<li>Incorporate run defense metrics for complete player assessment.</li>
-</ul></li>
+<li><strong>Features:</strong> Adds player tracking data like pre-snap motion, formation compactness, and player alignment.</li>
+<li><strong>Goal:</strong> Capture tactical nuances and achieve a 5-10 point accuracy gain.</li>
+<li><strong>Status:</strong> Currently refining and validating these new features.</li>
 </ul>
-</div>
-</section>
-<section id="model-comparison-basic-vs-advanced" class="slide level2">
-<h2>Model Comparison: Basic vs Advanced</h2>
-<ul>
-<li><strong>Basic Model:</strong>
-<ul>
-<li>Uses core situational variables (down, distance, score, time)</li>
-<li>Achieves baseline accuracy of ~70%</li>
-<li>Limited by lack of formation and motion context</li>
-</ul></li>
-</ul>
-<div class="fragment">
-<ul>
-<li><strong>Advanced Model:</strong>
-<ul>
-<li>Incorporates formation data and team tendencies</li>
-<li>Improved accuracy through feature engineering</li>
-<li>Foundation for tracking data integration</li>
-</ul></li>
-</ul>
-</div>
-</section>
-<section id="tracking-data-model-development" class="slide level2">
-<h2>Tracking Data Model Development</h2>
-<ul>
-<li><strong>Enhanced Features from Player Tracking:</strong>
-<ul>
-<li><strong>Pre-snap Motion Indicators:</strong> Detecting shifts and movement patterns that signal play type</li>
-<li><strong>Formation Compactness:</strong> Measuring offensive line density and spacing</li>
-<li><strong>Alignment Metrics:</strong> Quantifying receiver positioning and route stem indicators</li>
-</ul></li>
-</ul>
-<div class="fragment">
-<ul>
-<li><strong>Feature Engineering Approach:</strong>
-<ul>
-<li>Converting raw coordinate data into meaningful predictive signals</li>
-<li>Temporal analysis of pre-snap player movement</li>
-<li>Integration with traditional situational variables</li>
-</ul></li>
-</ul>
-</div>
-<div class="fragment">
-<ul>
-<li><strong>Expected Improvements:</strong>
-<ul>
-<li>Target accuracy increase of 5-10 percentage points</li>
-<li>Better capture of tactical nuances missed by basic features</li>
-<li>Enhanced ability to identify surprising play calls</li>
-</ul></li>
-</ul>
-</div>
+</div></div>
 </section>
 <section id="surprisals-a-new-metric-for-pass-rusher-evaluation" class="slide level2">
 <h2>Surprisals: A New Metric for Pass Rusher Evaluation</h2>
@@ -288,24 +235,23 @@ Verity and Cale
 </ul></li>
 </ul>
 </section>
-<section id="applying-the-surprisal-metric" class="slide level2">
+<section id="applying-the-surprisal-metric" class="slide level2 smaller">
 <h2>Applying the Surprisal Metric</h2>
 <div class="columns">
 <div class="column" style="width:50%;">
-<p><strong>1. Play-Specific Surprisal</strong></p>
-<p>The general formula is applied differently based on the actual play call:</p>
+<p><strong>1. Calculate Play-Specific Surprisal</strong></p>
+<p>First, we assign a “difficulty score” to every play based on our model’s prediction.</p>
 <ul>
-<li><p><strong>For a Pass Play:</strong> <span class="math display">\[-\log(\text{Predicted Pass Probability})\]</span></p></li>
-<li><p><strong>For a Run Play:</strong> <span class="math display">\[-\log(1 - \text{Predicted Pass Probability})\]</span></p></li>
+<li><p><strong>For a Pass Play:</strong> <span class="math display">\[ \text{Surprisal}_i = -\log(P_i(\text{Pass})) \]</span></p></li>
+<li><p><strong>For a Run Play:</strong> <span class="math display">\[ \text{Surprisal}_i = -\log(1 - P_i(\text{Pass})) \]</span></p></li>
 </ul>
+<p><em>(where <code>i</code> represents a single play)</em></p>
 </div><div class="column" style="width:50%;">
-<p><strong>2. Weighted Performance Metrics</strong></p>
-<p>We use the play’s surprisal to weight every pass-rushing outcome and normalize it by opportunity.</p>
+<p><strong>2. Aggregate for Season Totals</strong></p>
+<p>A player’s total score is the sum of the surprisal values from their specific achievements.</p>
 <ul>
-<li><p><strong>Weighted Sacks &amp; Hits:</strong> <span class="math display">\[ \text{Weighted Value} = \sum \text{Surprisal}_{\text{each play}} \]</span></p></li>
-<li><p><strong>Final Disruption Rate:</strong> <span class="math display">\[
-\text{Rate} = \frac{\text{Total Weighted Disruptions}}{\sum \text{Surprisal}_{\text{all snaps}}}
-\]</span></p></li>
+<li><p><strong>Weighted Sacks:</strong> <span class="math display">\[ \text{Weighted Sacks} = \sum_{i \in \text{Sacks}} \text{Surprisal}_i \]</span> <em>(Sum of surprisal scores for every play <code>i</code> where the player got a sack)</em></p></li>
+<li><p><strong>Final Disruption Rate:</strong> <span class="math display">\[ \text{Rate} = \frac{\text{Weighted Sacks} + \text{Weighted Hits}}{\sum_{j \in \text{All Pass Snaps}} \text{Surprisal}_j} \]</span> <em>(This normalizes their production by their total opportunity, weighted by difficulty)</em></p></li>
 </ul>
 </div></div>
 </section>
@@ -314,17 +260,7 @@ Verity and Cale
 <h4 id="sweat-and-watt-led-the-pack">Sweat and Watt Led the Pack</h4>
 
 <img data-src="SecondChecpointPresentation_files/figure-revealjs/unnamed-chunk-1-1.png" width="960" class="r-stretch"></section>
-<section id="interactive-pass-rusher-analysis-2023" class="slide level2">
-<h2>Interactive Pass Rusher Analysis (2023)</h2>
-<iframe src="interactive_player_dashboard.html" width="110%" height="600px" style="border: 1px solid #ddd;">
-</iframe>
-</section>
-<section id="interactive-team-predictability-dashboard-2023" class="slide level2">
-<h2>Interactive Team Predictability Dashboard (2023)</h2>
-<iframe src="interactive_team_dashboard_final.html" width="100%" height="550px" style="border: 1px solid #ddd;">
-</iframe>
-</section>
-<section id="tracking-data-model" class="slide level2 smaller">
+<section id="tracking-data-model-1" class="slide level2 smaller">
 <h2>Tracking Data Model</h2>
 <div class="columns">
 <div class="column" style="width:50%;">
@@ -339,7 +275,7 @@ Verity and Cale
 <li><strong>Formation Geometry:</strong> Formation width, depth, compactness, and WR spread.</li>
 <li><strong>Player Kinematics:</strong> Avg. player speed, acceleration, and density at the snap.</li>
 </ul></li>
-<li><strong>Advanced Geometry:</strong>
+<li><strong>Advanced Features:</strong>
 <ul>
 <li><strong>Running Lane Potential:</strong> Measures defensive traffic in a target run gap. <span class="math display">\[ \text{Potential} = \sum_{d \in D} \frac{1}{\text{dist}(d, \text{lane})^2} \]</span></li>
 <li><strong>Defensive Convex Hull:</strong> Area controlled by the defensive perimeter.</li>
@@ -368,17 +304,25 @@ Verity and Cale
 </section>
 <section id="the-case-for-continuous-models" class="slide level2 smaller">
 <h2>The Case for Continuous Models?</h2>
+<div class="columns">
+<div class="column" style="width:45%;">
 <ul>
-<li><p><strong>Beyond a Binary Choice:</strong> The run/pass decision is rarely binary. Continuous probability models can capture subtle pre-snap ‘tells’—like a safety’s depth—that shift the odds in real-time. [1]</p></li>
-<li><p><strong>Exploring the “Grey Area”:</strong> This allows us to analyze the “grey area” of play-calling by quantifying how specific player movements create dynamic possibilities. [1]</p></li>
-<li><p><strong>Richer Context:</strong> The ultimate goal is to evolve beyond simple classification and towards multi-class models (run, screen, deep pass) or regression models that predict outcomes like expected yards.```</p></li>
+<li><p><strong>Beyond Binary:</strong> The run/pass choice isn’t binary. Continuous models capture subtle “tells”—like a safety’s movement—that shift probabilities in real-time.</p></li>
+<li><p><strong>For Film Study:</strong> This provides a dynamic tool for coaches, allowing them to visualize exactly how pre-snap movements alter the likelihood of a run vs.&nbsp;a pass, frame-by-frame.</p></li>
+<li><p><strong>Future Work:</strong> Evolve to multi-class models (run, screen, deep pass) or regression models that predict outcomes like expected yards.</p></li>
 </ul>
+</div><div class="column" style="width:55%;">
+<div class="quarto-figure quarto-figure-center">
+<figure>
+<p><img data-src="Case%20for%20Continuous%20Models.gif" class="quarto-figure quarto-figure-center"></p>
+</figure>
+</div>
+<p><br></p>
+<div style="text-align: center; font-size: 0.6em; font-style: italic;">
+<p>Source: “Exposing Coverage Tells in the Pre-Snap” by Smit Bajaj (Kaggle)</p>
+</div>
+</div></div>
 </section>
-<section class="slide level2">
-
-<h3 id="example-of-a-continuous-model">Example of a continuous model</h3>
-
-<img data-src="Case%20for%20Continuous%20Models.gif" class="quarto-figure quarto-figure-center r-stretch" style="width:85.0%"></section>
 <section id="key-findings-and-implications" class="slide level2">
 <h2>Key Findings and Implications</h2>
 <ul>
@@ -410,36 +354,61 @@ Verity and Cale
 </ul>
 </div>
 </section>
+<section id="plan-of-action-completed-steps" class="slide level2 smaller">
+<h2>Plan of Action: Completed Steps</h2>
+<ul class="task-list">
+<li><label><input type="checkbox" checked=""><strong>Data Pipeline Built</strong></label>
+<ul>
+<li>Merged PBP, personnel, and tracking data (2016-2023).</li>
+<li>Cleaned and standardized all data sources.</li>
+</ul></li>
+<li><label><input type="checkbox" checked=""><strong>Model Development Pipeline</strong></label>
+<ul>
+<li><strong>M1 (Situational):</strong> Baseline model using down, distance, etc.</li>
+<li><strong>M2 (Personnel):</strong> Added offensive/defensive formations.</li>
+<li><strong>M3 (Tracking):</strong> Integrated pre-snap geometric features.</li>
+</ul></li>
+<li><label><input type="checkbox" checked=""><strong>Initial Pass Rusher Metric</strong></label>
+<ul>
+<li>Developed the “Surprisal” framework to weight stats by play predictability.</li>
+</ul></li>
+</ul>
+</section>
+<section id="plan-of-action-next-steps" class="slide level2 smaller">
+<h2>Plan of Action: Next Steps</h2>
+<ul class="task-list">
+<li><label><input type="checkbox"><strong>Finalize Pass Rusher Evaluation</strong></label>
+<ul>
+<li>Refine and validate the Surprisal-weighted metric.</li>
+<li>Produce final player rankings and visualizations.</li>
+</ul></li>
+<li><label><input type="checkbox"><strong>Analyze Model Components</strong></label>
+<ul>
+<li>Test sub-models (e.g., defense-only tracking) to isolate what information is most valuable for prediction.</li>
+</ul></li>
+<li><label><input type="checkbox"><strong>Explore Continuous Models</strong></label>
+<ul>
+<li>Move from a binary classifier to a continuous probability model to better capture the nuance of modern offenses (e.g., RPOs).</li>
+</ul></li>
+</ul>
+</section>
 <section id="questions" class="slide level2">
 <h2>Questions?</h2>
-<p><em>Thank you for your attention. We welcome your questions and feedback on our approach to NFL play prediction and player evaluation.</em></p>
 </section>
 <section>
 <section id="appendix-plots" class="title-slide slide level1 appendix smaller center">
 <h1>Appendix: Plots</h1>
 
 </section>
-<section id="univariate-feature-analysis" class="slide level2">
-<h2>Univariate Feature Analysis</h2>
-
-<img data-src="Univariate_AUCs_for_LogRegression1.png" style="width:70.0%" class="r-stretch quarto-figure-center"><p class="caption">Univariate AUCs for LogRegression1</p><p><em>Key insights: Down and distance remain the strongest individual predictors, but formation features show promising discriminative power.</em></p>
+<section id="interactive-pass-rusher-analysis-2023" class="slide level2">
+<h2>Interactive Pass Rusher Analysis (2023)</h2>
+<iframe src="interactive_player_dashboard.html" width="110%" height="600px" style="border: 1px solid #ddd;">
+</iframe>
 </section>
-<section id="model-performance-analysis" class="slide level2">
-<h2>Model Performance Analysis</h2>
-<h3 class="smaller" id="lowest-vs-highest-accuracy-games">Lowest vs Highest Accuracy Games</h3>
-<div class="quarto-figure quarto-figure-center">
-<figure>
-<p><img data-src="LowestHighestAccuracyGames.png" style="width:70.0%"></p>
-<figcaption>Lowest vs Highest Accuracy Games</figcaption>
-</figure>
-</div>
-<h3 class="smaller" id="most-and-least-predictable-teams">Most and Least Predictable Teams</h3>
-<div class="quarto-figure quarto-figure-center">
-<figure>
-<p><img data-src="MostandLeastPredictableTeams.png" style="width:70.0%"></p>
-<figcaption>Most and Least Predictable Teams</figcaption>
-</figure>
-</div>
+<section id="interactive-team-predictability-dashboard-2023" class="slide level2">
+<h2>Interactive Team Predictability Dashboard (2023)</h2>
+<iframe src="interactive_team_dashboard_final.html" width="100%" height="550px" style="border: 1px solid #ddd;">
+</iframe>
 </section>
 <section id="related-work" class="slide level2 smaller">
 <h2>Related Work</h2>
@@ -536,11 +505,7 @@ Verity and Cale
 <h2>Model Performance Summary</h2>
 
 <img data-src="Model%20Performance%20Summary.png" class="quarto-figure quarto-figure-center r-stretch" style="width:75.0%"></section>
-<section id="model-performance-summary-2" class="slide level2">
-<h2>Model Performance Summary 2</h2>
-
-<img data-src="Model%20Performance%20Summary%202.png" class="quarto-figure quarto-figure-center r-stretch" style="width:75.0%"></section>
-<section id="most-and-least-predictable-teams-1" class="slide level2">
+<section id="most-and-least-predictable-teams" class="slide level2">
 <h2>Most and Least Predictable Teams</h2>
 
 <img data-src="MostandLeastPredictableTeams.png" class="quarto-figure quarto-figure-center r-stretch" style="width:75.0%"></section>
@@ -576,10 +541,6 @@ Verity and Cale
 <h2>Prediction Distribution by Actual Outcomes</h2>
 
 <img data-src="Prediction%20Distribution%20by%20Actual%20Outcomes.png" class="quarto-figure quarto-figure-center r-stretch" style="width:75.0%"></section>
-<section id="residuals" class="slide level2">
-<h2>Residuals</h2>
-
-<img data-src="Residuals.png" class="quarto-figure quarto-figure-center r-stretch" style="width:75.0%"></section>
 <section id="residuals-vs.-fitted-values" class="slide level2">
 <h2>Residuals vs.&nbsp;Fitted Values</h2>
 
