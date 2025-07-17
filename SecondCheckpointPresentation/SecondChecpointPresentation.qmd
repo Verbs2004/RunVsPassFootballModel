@@ -55,11 +55,104 @@ format:
 
 * Apply Model to Pass Rusher Evaluation
   <ul> <li>Incorporate run defense metrics for a more complete picture</li> </ul>
+  
+## Model Comparison: Basic vs Advanced
 
-## Performance: Basic vs. Advanced Models
+* Basic Model
+
+## Surprisals are Useful to Evaluate the Skill of Pass Rushers
+
+::: {.callout-note title="Surprisal Definition" style="font-size: 1.5em;"}
+
+Surprisal is defined as the negative logarithm of the probability of what actually happened:
+
+$$
+\text{Surprisal} = - \log \big( \text{probability of observed event} \big)
+$$
+
+This measures how "surprising" or "informative" an event is — rarer events have higher surprisal.
+
+:::
+
+
+## Sweat and Watt Led the Pack
+
+```{r}
+library(ggplot2)
+library(data.table)
+library(ggrepel)
+
+# Load the updated data
+data <- fread("
+Player,Team,Position,Weighted_Sacks,Weighted_QB_Hits,Pass_Rush_Snaps,Disruption_Rate
+Montez Sweat,CHI,DL,6.695,13.004,610,0.0592
+Marcus Davenport,MIN,LB,0.99,2.385,111,0.0559
+T.J. Watt,PIT,LB,7.501,16.702,801,0.0546
+Nik Bonitto,DEN,LB,4.376,8.561,440,0.0542
+Derek Barnett,HOU,DL,1.272,6.824,257,0.0525
+Josh Allen,JAX,LB,6.953,11.648,692,0.0511
+Dante Fowler Jr.,DAL,DL,1.988,3.72,230,0.0507
+Jonathan Greenard,HOU,DL,7.127,10.8,650,0.0484
+Nick Bosa,SF,DL,4.5,19.021,925,0.0473
+Lukas Van Ness,GB,LB,3.321,7.205,377,0.0466
+Clelin Ferrell,SF,DL,2.88,8.561,424,0.0463
+Leonard Floyd,BUF,DL,4.504,9.118,534,0.0453
+Brent Urban,BAL,DL,2.487,4.697,241,0.045
+Yetur Gross-Matos,CAR,LB,1.956,4.878,280,0.0435
+Matt Judon,NE,LB,0.354,3.71,173,0.043
+Markus Golden,PIT,LB,1.543,3.217,187,0.0418
+Haason Reddick,PHI,LB,5.748,11.996,782,0.0415
+Felix Anudike-Uzomah,KC,DL,0,2.91,155,0.0413
+Samson Ebukam,IND,DL,3.521,8.204,557,0.0407
+Adetomiwa Adebawore,IND,DL,0.046,2.821,113,0.0407
+Tyquan Lewis,IND,DL,1.764,5.857,336,0.0406
+Justin Madubuike,BAL,DL,2.917,11.72,733,0.0403
+Greg Rousseau,BUF,DL,1.882,10.567,549,0.0395
+Trey Hendrickson,CIN,DL,5.223,8.339,649,0.0392
+Danielle Hunter,MIN,LB,7.745,11.108,840,0.0388
+Joseph Ossai,CIN,DL,0.247,2.428,136,0.0383
+Grover Stewart,IND,DL,0,6.797,304,0.038
+Quinton Jefferson,NYJ,DL,2.308,7.411,441,0.038
+Bryce Huff,NYJ,DL,2.664,5.449,394,0.038
+Anthony Nelson,TB,LB,2.429,4.378,347,0.0373
+")
+
+# Create abbreviated label: first initial + last name
+# Handle middle names by only taking first letter of first name + last word as last name
+data[, Label := {
+  parts <- strsplit(Player, " ")[[1]]
+  if(length(parts) == 1) {
+    Player
+  } else {
+    first_initial <- substr(parts[1], 1, 1)
+    last_names <- paste(parts[-1], collapse = " ")
+    paste0(first_initial, ". ", last_names)
+  }
+}, by = Player]
+
+# Plot
+ggplot(data, aes(y = Disruption_Rate, x = Weighted_Sacks + Weighted_QB_Hits, color = Pass_Rush_Snaps)) +
+  geom_point(size = 3) +
+  geom_text_repel(aes(label = Label), size = 3) +
+  scale_color_viridis_c(option = "viridis", name = "Snaps") +
+  labs(
+    title = "Surprisal-Weighted Pass Rushers (2023)",
+    x = "Weighted Sacks + QB Hits",
+    y = "Disruption Rate"
+  ) +
+  theme_minimal()
+```
 
 
 
+
+
+
+
+
+## Plan of Action
+
+* 
 
 
 

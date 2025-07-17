@@ -227,26 +227,43 @@ Incorporate run defense metrics for a more complete picture
 </ul>
 </div>
 </section>
-<section id="roc-curves-basic-vs.-advanced-models" class="slide level2">
-<h2>ROC Curves: Basic vs.&nbsp;Advanced Models</h2>
-<div class="columns">
-<div class="column" style="width:50%;">
-<p><strong>Basic Model</strong></p>
-<div class="quarto-figure quarto-figure-center">
-<figure>
-<p><img data-src="BasicModelROCPlot.png" style="width:100.0%"></p>
-<figcaption>Basic ROC</figcaption>
-</figure>
+<section id="model-comparison-basic-vs-advanced" class="slide level2">
+<h2>Model Comparison: Basic vs Advanced</h2>
+<ul>
+<li>Basic Model</li>
+</ul>
+</section>
+<section id="surprisals-are-useful-to-evaluate-the-skill-of-pass-rushers" class="slide level2">
+<h2>Surprisals are Useful to Evaluate the Skill of Pass Rushers</h2>
+<div title="Surprisal Definition" style="font-size: 1.5em;">
+<div class="callout callout-note callout-titled callout-style-default">
+<div class="callout-body">
+<div class="callout-title">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
 </div>
-</div><div class="column" style="width:50%;">
-<p><strong>Advanced Model</strong></p>
-<div class="quarto-figure quarto-figure-center">
-<figure>
-<p><img data-src="AdvancedModelROCPlot.png" style="width:90.0%"></p>
-<figcaption>Advanced ROC</figcaption>
-</figure>
+<p><strong>Surprisal Definition</strong></p>
 </div>
-</div></div>
+<div class="callout-content">
+<p>Surprisal is defined as the negative logarithm of the probability of what actually happened:</p>
+<p><span class="math display">\[
+\text{Surprisal} = - \log \big( \text{probability of observed event} \big)
+\]</span></p>
+<p>This measures how “surprising” or “informative” an event is — rarer events have higher surprisal.</p>
+</div>
+</div>
+</div>
+</div>
+</section>
+<section id="sweat-and-watt-led-the-pack" class="slide level2">
+<h2>Sweat and Watt Led the Pack</h2>
+
+<img data-src="SecondChecpointPresentation_files/figure-revealjs/unnamed-chunk-1-1.png" width="960" class="r-stretch"></section>
+<section id="plan-of-action-1" class="slide level2">
+<h2>Plan of Action</h2>
+<ul>
+<li></li>
+</ul>
 
 </section>
     </div>
@@ -466,6 +483,44 @@ Incorporate run defense metrics for a more complete picture
         ]
       });
     </script>
+    
+    <script>
+      // htmlwidgets need to know to resize themselves when slides are shown/hidden.
+      // Fire the "slideenter" event (handled by htmlwidgets.js) when the current
+      // slide changes (different for each slide format).
+      (function () {
+        // dispatch for htmlwidgets
+        function fireSlideEnter() {
+          const event = window.document.createEvent("Event");
+          event.initEvent("slideenter", true, true);
+          window.document.dispatchEvent(event);
+        }
+
+        function fireSlideChanged(previousSlide, currentSlide) {
+          fireSlideEnter();
+
+          // dispatch for shiny
+          if (window.jQuery) {
+            if (previousSlide) {
+              window.jQuery(previousSlide).trigger("hidden");
+            }
+            if (currentSlide) {
+              window.jQuery(currentSlide).trigger("shown");
+            }
+          }
+        }
+
+        // hookup for slidy
+        if (window.w3c_slidy) {
+          window.w3c_slidy.add_observer(function (slide_num) {
+            // slide_num starts at position 1
+            fireSlideChanged(null, w3c_slidy.slides[slide_num - 1]);
+          });
+        }
+
+      })();
+    </script>
+
     <script id="quarto-html-after-body" type="application/javascript">
       window.document.addEventListener("DOMContentLoaded", function (event) {
         const tabsets =  window.document.querySelectorAll(".panel-tabset-tabby")

@@ -581,7 +581,7 @@ evaluate_pass_rushers <- function(data_season) {
   
   pass_rusher_positions <- c("DE", "DT", "EDGE", "OLB", "ILB", "LB", "NT", "DL")
   disruption_summary <- disruption_summary[position %in% pass_rusher_positions]
-  disruption_summary <- disruption_summary[raw_pass_rush_snaps >= 300]
+  disruption_summary <- disruption_summary[raw_pass_rush_snaps >= 100]
   
   setorder(disruption_summary, -disruption_rate)
   
