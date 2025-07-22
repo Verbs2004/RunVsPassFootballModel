@@ -86,9 +86,9 @@ setorder(df, game_id, fixed_drive, play_id)
 
 df[, drive_play_idx := 1:.N, by = .(game_id, posteam)]
 df[, `:=`(
-  is_pass = as.integer(play_type == "pass"),
-  is_first_play_of_drive = fifelse(drive_play_idx == 1, 1, 0),
-  prev_play_was_pass = shift(fifelse(play_type == "pass", 1, 0), 1, fill = 0),
+  is_pass = as.integer(qb_dropback == 1),
+  is_first_play_of_drive = as.integer(drive_play_idx == 1),
+  prev_play_was_pass = shift(as.integer(qb_dropback == 1), 1, fill = 0),
   yards_gained_on_prev_play = shift(yards_gained, 1, fill = 0)
 ), by = .(game_id, fixed_drive)]
 
@@ -316,8 +316,14 @@ evaluate_pass_rushers <- function(data_season) {
   
   player_surprisal_exposure <- def_players_long[, .(weighted_pass_rush_snaps = sum(surprisal, na.rm = TRUE)), by = gsis_id]
   
-  sacks <- data_season[sack == 1 & !is.na(sack_player_id), .(gsis_id = sack_player_id, surprisal = surprisal)]
-  sacks_weighted <- sacks[, .(weighted_sacks = sum(surprisal, na.rm = TRUE)), by = gsis_id]
+  sacks_full <- data_season[sack == 1 & !is.na(sack_player_id), 
+                            .(gsis_id = sack_player_id, weight = 1, surprisal)]
+  sacks_half_1 <- data_season[sack == 1 & !is.na(half_sack_1_player_id), 
+                              .(gsis_id = half_sack_1_player_id, weight = 0.5, surprisal)]
+  sacks_half_2 <- data_season[sack == 1 & !is.na(half_sack_2_player_id), 
+                              .(gsis_id = half_sack_2_player_id, weight = 0.5, surprisal)]
+  sacks <- rbindlist(list(sacks_full, sacks_half_1, sacks_half_2))
+  sacks_weighted <- sacks[, .(weighted_sacks = sum(weight * surprisal, na.rm = TRUE)), by = gsis_id]
   
   qb_hit_cols <- grep("^qb_hit_\\d+_player_id$", colnames(data_season), value = TRUE)
   qb_hits <- rbindlist(lapply(qb_hit_cols, function(col) {

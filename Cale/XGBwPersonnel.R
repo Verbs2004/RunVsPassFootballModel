@@ -101,9 +101,9 @@ setorder(df_base, game_id, fixed_drive, play_id)
 # Create target and sequential features in-place
 df_base[, drive_play_idx := 1:.N, by = .(game_id, posteam)]
 df_base[, `:=`(
-  is_pass = as.numeric(play_type == "pass"),
-  is_first_play_of_drive = fifelse(drive_play_idx == 1, 1, 0),
-  prev_play_was_pass = shift(fifelse(play_type == "pass", 1, 0), 1, fill = 0),
+  is_pass = as.numeric(qb_dropback == 1),
+  is_first_play_of_drive = as.integer(drive_play_idx == 1),
+  prev_play_was_pass = shift(as.integer(qb_dropback == 1), 1, fill = 0),
   yards_gained_on_prev_play = shift(yards_gained, 1, fill = 0)
 ), by = .(game_id, fixed_drive)]
 
@@ -526,6 +526,41 @@ ggplot(roc_df, aes(x = fpr, y = tpr)) +
            hjust = 0, size = 4, color = "#1c6ef2") +
   theme_minimal()
 
+library(ggplot2)
+library(scales)
+
+# Fast merging by combining up front
+preds_all <- rbindlist(predictions_by_year)
+actuals_all <- df_base[season %in% 2019:2023, .(game_id, play_id, is_pass)]
+
+preds_2023 <- preds_all[substr(game_id, 1, 4) == "2023"]
+actuals_2023 <- actuals_all[substr(game_id, 1, 4) == "2023"]
+
+setkey(preds_2023, game_id, play_id)
+setkey(actuals_2023, game_id, play_id)
+
+cal_data <- merge(preds_2023, actuals_2023, by = c("game_id", "play_id"))
+
+# Compute run fields
+cal_data[, `:=` (
+  pred_run_prob = 1 - pred_pass_prob,
+  is_run = 1 - is_pass
+)]
+
+ggplot(cal_data, aes(x = pred_run_prob, y = is_run)) +
+  geom_jitter(width = 0.01, height = 0.01, alpha = 0.05, color = "#2c7bb6") +
+  geom_smooth(method = "loess", se = FALSE, color = "#2c7bb6", size = 1.2) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "gray") +
+  scale_x_continuous(labels = percent_format(accuracy = 1), limits = c(0, 1)) +
+  scale_y_continuous(labels = percent_format(accuracy = 1), limits = c(0, 1)) +
+  labs(
+    title = "Unbinned Calibration Plot: Run Prediction Model",
+    x = "Predicted Run Probability",
+    y = "Actual Run Rate"
+  ) +
+  theme_minimal()
+
+
 ######
 
 # Merge predictions into full df by game_id, play_id, and season
@@ -550,25 +585,74 @@ evaluate_pass_rushers <- function(data_season) {
     surprisal = rep(surprisal, lengths(strsplit(defense_players, ";")))
   ), by = .(game_id, play_id)]
   
+  # Add predicted run probability per defender per snap
+  def_players_long[, pred_run_prob := 1 - data_season[.SD, on = .(game_id, play_id), pred_pass_prob]]
+  
+  # Average predicted run chance per defender
+  avg_run_prob_by_player <- def_players_long[, .(
+    avg_run_prob = mean(pred_run_prob, na.rm = TRUE)
+  ), by = gsis_id]
+  
   player_surprisal_exposure <- def_players_long[, .(weighted_pass_rush_snaps = sum(surprisal, na.rm = TRUE)), by = gsis_id]
   
-  sacks <- data_season[sack == 1 & !is.na(sack_player_id), .(gsis_id = sack_player_id, surprisal = surprisal)]
-  sacks_weighted <- sacks[, .(weighted_sacks = sum(surprisal, na.rm = TRUE)), by = gsis_id]
+  sacks_full <- data_season[sack == 1 & !is.na(sack_player_id), 
+                            .(gsis_id = sack_player_id, weight = 1, surprisal)]
+  sacks_half_1 <- data_season[sack == 1 & !is.na(half_sack_1_player_id), 
+                              .(gsis_id = half_sack_1_player_id, weight = 0.5, surprisal)]
+  sacks_half_2 <- data_season[sack == 1 & !is.na(half_sack_2_player_id), 
+                              .(gsis_id = half_sack_2_player_id, weight = 0.5, surprisal)]
+  sacks <- rbindlist(list(sacks_full, sacks_half_1, sacks_half_2))
+  sacks_weighted <- sacks[, .(weighted_sacks = sum(weight * surprisal, na.rm = TRUE)), by = gsis_id]
+  sacks_raw <- sacks[, .(raw_sacks = .N), by = gsis_id]
+  
   
   qb_hit_cols <- grep("^qb_hit_\\d+_player_id$", colnames(data_season), value = TRUE)
   qb_hits <- rbindlist(lapply(qb_hit_cols, function(col) {
     data_season[qb_hit == 1 & !is.na(get(col)), .(gsis_id = get(col), surprisal = surprisal)]
   }))
+  qb_hits_raw <- qb_hits[, .(raw_qb_hits = .N), by = gsis_id]
   qb_hits_weighted <- qb_hits[, .(weighted_qb_hits = sum(surprisal, na.rm = TRUE)), by = gsis_id]
   player_snap_counts <- def_players_long[, .(raw_pass_rush_snaps = .N), by = gsis_id]
   
   disruption_summary <- merge(player_surprisal_exposure, sacks_weighted, by = "gsis_id", all.x = TRUE)
   disruption_summary <- merge(disruption_summary, qb_hits_weighted, by = "gsis_id", all.x = TRUE)
   disruption_summary <- merge(disruption_summary, player_snap_counts, by = "gsis_id", all.x = TRUE)
+  disruption_summary <- merge(disruption_summary, sacks_raw, by = "gsis_id", all.x = TRUE)
+  disruption_summary <- merge(disruption_summary, qb_hits_raw, by = "gsis_id", all.x = TRUE)
+  disruption_summary[is.na(raw_sacks), raw_sacks := 0]
+  disruption_summary[is.na(raw_qb_hits), raw_qb_hits := 0]
   disruption_summary[is.na(weighted_sacks), weighted_sacks := 0]
   disruption_summary[is.na(weighted_qb_hits), weighted_qb_hits := 0]
-  
   disruption_summary[, disruption_rate := (weighted_sacks + weighted_qb_hits) / weighted_pass_rush_snaps]
+  disruption_summary[, raw_disruption_rate := (raw_sacks + raw_qb_hits) / raw_pass_rush_snaps]
+  disruption_summary[, disruption_rate_diff := raw_disruption_rate - disruption_rate]
+  
+  disruption_summary <- merge(disruption_summary, avg_run_prob_by_player, by = "gsis_id", all.x = TRUE)
+  
+  run_plays <- data_season[play_type == "run" & !is.na(defense_players) & defense_players != ""]
+  run_def_long <- run_plays[, .(
+    gsis_id = unlist(strsplit(defense_players, ";"))
+  ), by = .(game_id, play_id, yards_gained)]
+  
+  all_players <- unique(run_def_long$gsis_id)
+  run_play_ids <- unique(run_plays[, .(game_id, play_id, yards_gained)])
+  player_on_plays <- run_def_long[, .(on_play = TRUE), by = .(gsis_id, game_id, play_id)]
+  
+  ypc_diff_dt <- rbindlist(lapply(all_players, function(player_id) {
+    joined <- merge(run_play_ids, player_on_plays[gsis_id == player_id], 
+                    by = c("game_id", "play_id"), all.x = TRUE)
+    joined[is.na(on_play), on_play := FALSE]
+    snaps_on <- sum(joined$on_play)
+    if (snaps_on < 100) return(NULL)
+    ypc_on <- joined[on_play == TRUE, mean(yards_gained, na.rm = TRUE)]
+    ypc_off <- joined[on_play == FALSE, mean(yards_gained, na.rm = TRUE)]
+    list(gsis_id = player_id,
+         ypc_on = ypc_on,
+         ypc_off = ypc_off,
+         ypc_diff = ypc_on - ypc_off)
+  }))
+  
+  disruption_summary <- merge(disruption_summary, ypc_diff_dt[, .(gsis_id, ypc_diff)], by = "gsis_id", all.x = TRUE)
   
   rosters <- tryCatch({
     setDT(load_rosters(unique(data_season$season)))[, .(gsis_id, full_name, position, team)]
@@ -592,7 +676,12 @@ evaluate_pass_rushers <- function(data_season) {
     Weighted_Sacks = round(weighted_sacks, 3),
     Weighted_QB_Hits = round(weighted_qb_hits, 3),
     Pass_Rush_Snaps = raw_pass_rush_snaps,
-    Disruption_Rate = round(disruption_rate, 4)
+    Weighted_Pass_Rush_Snaps = round(weighted_pass_rush_snaps, 3),
+    Disruption_Rate = round(disruption_rate, 4),
+    Raw_Disruption_Rate = round(raw_disruption_rate, 4),
+    Disruption_Rate_Diff = round(disruption_rate_diff, 4),
+    YPC_Diff = round(ypc_diff, 3),
+    Avg_Run = round(avg_run_prob, 5)
   )]
 }
 
@@ -603,15 +692,327 @@ for (yr in 2023) {
   print(head(res, 30))
 }
 
-season_data <- df_base[season == 2023]
-res <- evaluate_pass_rushers(season_data)
-print(dim(res))  # Should return number of rows and columns
+library(ggplot2)
+library(ggrepel)
+library(viridis)
 
+# Filter top 30 by Pass Rush Snaps
+top50v1 <- res[!is.na(YPC_Diff)][order(-Raw_Disruption_Rate)][1:50]
 
+ggplot(top50v1, aes(x = YPC_Diff, y = Raw_Disruption_Rate, color = Pass_Rush_Snaps)) +
+  geom_point(size = 3, alpha = 0.85) +
+  geom_text_repel(aes(label = Player), size = 4.5, max.overlaps = 100) +
+  scale_color_viridis_c(option = "D", direction = 1, name = "Pass Rush Snaps") +
+  labs(
+    title = "Top 50 Pass Rushers by Raw Disruption Rate",
+    x = "Yards Per Carry Allowed (On - Off Field)",
+    y = "Disruption Rate",
+    caption = "2023 season | Must have ≥ 100 pass rush snaps and ≥ 100 run defense snaps"
+  ) +
+  theme_minimal(base_size = 14)
 
+top50v2 <- res[!is.na(YPC_Diff)][order(-Disruption_Rate)][1:50]
 
+ggplot(top50v2, aes(x = YPC_Diff, y = Disruption_Rate, color = Weighted_Pass_Rush_Snaps)) +
+  geom_point(size = 3, alpha = 0.85) +
+  geom_text_repel(aes(label = Player), size = 4.5, max.overlaps = 100) +
+  scale_color_viridis_c(option = "D", direction = 1, name = "Pass Rush Snaps") +
+  labs(
+    title = "Top 50 Pass Rushers by Weighted Disruption Rate",
+    x = "Yards Per Carry Allowed (On - Off Field)",
+    y = "Disruption Rate",
+    caption = "2023 season | Must have ≥ 100 pass rush snaps and ≥ 100 run defense snaps"
+  ) +
+  theme_minimal(base_size = 14)
 
+top50v3 <- res[!is.na(YPC_Diff)][order(-Disruption_Rate_Diff)][1:50]
 
+ggplot(top50v3, aes(x = YPC_Diff, y = Disruption_Rate_Diff, color = Weighted_Pass_Rush_Snaps)) +
+  geom_point(size = 3, alpha = 0.85) +
+  geom_text_repel(aes(label = Player), size = 4.5, max.overlaps = 100) +
+  scale_color_viridis_c(option = "D", direction = 1, name = "Pass Rush Snaps") +
+  labs(
+    title = "Top 50 Pass Rushers by Disruption Rate Difference",
+    x = "Yards Per Carry Allowed (On - Off Field)",
+    y = "Disruption Rate Residual",
+    caption = "2023 season | Must have ≥ 100 pass rush snaps and ≥ 100 run defense snaps"
+  ) +
+  theme_minimal(base_size = 14)
 
+### Player's average run % for every play vs. pressure rate
 
+top50v4 <- res[!is.na(YPC_Diff)][order(-Disruption_Rate)][1:50]
+
+ggplot(top50v4, aes(x = Raw_Disruption_Rate, y = Disruption_Rate, color = Weighted_Pass_Rush_Snaps)) +
+  geom_point(size = 3, alpha = 0.85) +
+  geom_text_repel(aes(label = Player), size = 4.5, max.overlaps = 100) +
+  scale_color_viridis_c(option = "D", direction = 1, name = "Pass Rush Snaps") +
+  labs(
+    title = "Top 50 Pass Rushers by Disruption Rate",
+    x = "Raw Disruption Rate",
+    y = "Surprisal Weighted Disruption Rate",
+    caption = "2023 season | Must have ≥ 100 pass rush snaps and ≥ 100 run defense snaps"
+  ) +
+  theme_minimal(base_size = 14)
+
+top50v5 <- res[!is.na(YPC_Diff)][order(-Disruption_Rate)]#[1:50]
+
+ggplot(top50v5, aes(x = Avg_Run, y = Raw_Disruption_Rate, color = Pass_Rush_Snaps)) +
+  geom_point(size = 3, alpha = 0.85) +
+  #geom_text_repel(aes(label = Player), size = 4.5, max.overlaps = 100) +
+  geom_smooth(method = "lm", se = TRUE, color = "black", linetype = "dashed", size = 1.2) +
+  scale_color_viridis_c(option = "D", direction = 1, name = "Pass Rush Snaps") +
+  labs(
+    title = "Disruption Rate Decreases with Run %",
+    x = "Run %",
+    y = "Disruption Rate",
+    caption = "2023 season | Must have ≥ 100 pass rush snaps and ≥ 100 run defense snaps"
+  ) +
+  theme_minimal(base_size = 14)
+
+# Step 1: Fit linear model
+lm_fit <- lm(Raw_Disruption_Rate ~ Avg_Run, data = top50v5)
+
+# Step 2: Predict fitted values
+top50v5$fitted <- predict(lm_fit)
+
+# Step 3: Compute vertical distance from each point to the line
+top50v5$residual <- top50v5$Raw_Disruption_Rate - top50v5$fitted
+
+top_rows <- order(-top50v5$residual)[1:15]  # largest positive residuals
+top50v5[, label_flag := FALSE]
+top50v5[top_rows, label_flag := TRUE]
+
+ggplot(top50v5, aes(x = Avg_Run, y = Raw_Disruption_Rate, color = Pass_Rush_Snaps)) +
+  geom_point(alpha = 0.85) +
+  geom_text_repel(
+    data = top50v5[label_flag == TRUE],
+    aes(label = Player),
+    size = 4.5,
+    max.overlaps = Inf
+  ) +
+  geom_smooth(method = "lm", se = TRUE, color = "black", linetype = "dashed", size = 1.2) +
+  scale_color_viridis_c(option = "D", direction = 1, name = "Total Snaps") +
+  labs(
+    title = "Disruption Rate Decreases with Average Run %",
+    x = "Average Run %",
+    y = "Raw Disruption Rate"
+  ) +
+  theme_minimal(base_size = 14)
+
+### 2022 Weeks 1-9
+
+evaluate_pass_rushers <- function(data_season) {
+  epsilon <- 1e-10
+  data_season[, actual_pass := as.integer(play_type == "pass")]
+  data_season[, pred_pass_prob_clipped := pmin(pmax(pred_pass_prob, epsilon), 1 - epsilon)]
+  data_season[, surprisal := -log(ifelse(actual_pass == 1, pred_pass_prob_clipped, 1 - pred_pass_prob_clipped))]
+  
+  data_season[, defense_players := str_trim(defense_players)]
+  data_season[, defense_players := gsub(";+$", "", defense_players)]
+  
+  def_players_long <- data_season[!is.na(defense_players) & defense_players != "", .(
+    gsis_id = unlist(strsplit(defense_players, ";")),
+    surprisal = rep(surprisal, lengths(strsplit(defense_players, ";")))
+  ), by = .(game_id, play_id)]
+  
+  # Add predicted run probability per defender per snap
+  def_players_long[, pred_run_prob := 1 - data_season[.SD, on = .(game_id, play_id), pred_pass_prob]]
+  
+  # Average predicted run chance per defender
+  avg_run_prob_by_player <- def_players_long[, .(
+    avg_run_prob = mean(pred_run_prob, na.rm = TRUE)
+  ), by = gsis_id]
+  
+  player_surprisal_exposure <- def_players_long[, .(weighted_pass_rush_snaps = sum(surprisal, na.rm = TRUE)), by = gsis_id]
+  
+  sacks_full <- data_season[sack == 1 & !is.na(sack_player_id), 
+                            .(gsis_id = sack_player_id, weight = 1, surprisal)]
+  sacks_half_1 <- data_season[sack == 1 & !is.na(half_sack_1_player_id), 
+                              .(gsis_id = half_sack_1_player_id, weight = 0.5, surprisal)]
+  sacks_half_2 <- data_season[sack == 1 & !is.na(half_sack_2_player_id), 
+                              .(gsis_id = half_sack_2_player_id, weight = 0.5, surprisal)]
+  sacks <- rbindlist(list(sacks_full, sacks_half_1, sacks_half_2))
+  sacks_weighted <- sacks[, .(weighted_sacks = sum(weight * surprisal, na.rm = TRUE)), by = gsis_id]
+  sacks_raw <- sacks[, .(raw_sacks = .N), by = gsis_id]
+  
+  
+  qb_hit_cols <- grep("^qb_hit_\\d+_player_id$", colnames(data_season), value = TRUE)
+  qb_hits <- rbindlist(lapply(qb_hit_cols, function(col) {
+    data_season[qb_hit == 1 & !is.na(get(col)), .(gsis_id = get(col), surprisal = surprisal)]
+  }))
+  qb_hits_raw <- qb_hits[, .(raw_qb_hits = .N), by = gsis_id]
+  qb_hits_weighted <- qb_hits[, .(weighted_qb_hits = sum(surprisal, na.rm = TRUE)), by = gsis_id]
+  player_snap_counts <- def_players_long[, .(raw_pass_rush_snaps = .N), by = gsis_id]
+  
+  disruption_summary <- merge(player_surprisal_exposure, sacks_weighted, by = "gsis_id", all.x = TRUE)
+  disruption_summary <- merge(disruption_summary, qb_hits_weighted, by = "gsis_id", all.x = TRUE)
+  disruption_summary <- merge(disruption_summary, player_snap_counts, by = "gsis_id", all.x = TRUE)
+  disruption_summary <- merge(disruption_summary, sacks_raw, by = "gsis_id", all.x = TRUE)
+  disruption_summary <- merge(disruption_summary, qb_hits_raw, by = "gsis_id", all.x = TRUE)
+  disruption_summary[is.na(raw_sacks), raw_sacks := 0]
+  disruption_summary[is.na(raw_qb_hits), raw_qb_hits := 0]
+  disruption_summary[is.na(weighted_sacks), weighted_sacks := 0]
+  disruption_summary[is.na(weighted_qb_hits), weighted_qb_hits := 0]
+  disruption_summary[, disruption_rate := (weighted_sacks + weighted_qb_hits) / weighted_pass_rush_snaps]
+  disruption_summary[, raw_disruption_rate := (raw_sacks + raw_qb_hits) / raw_pass_rush_snaps]
+  disruption_summary[, disruption_rate_diff := raw_disruption_rate - disruption_rate]
+  
+  disruption_summary <- merge(disruption_summary, avg_run_prob_by_player, by = "gsis_id", all.x = TRUE)
+  
+  run_plays <- data_season[play_type == "run" & !is.na(defense_players) & defense_players != ""]
+  run_def_long <- run_plays[, .(
+    gsis_id = unlist(strsplit(defense_players, ";"))
+  ), by = .(game_id, play_id, yards_gained)]
+  
+  all_players <- unique(run_def_long$gsis_id)
+  run_play_ids <- unique(run_plays[, .(game_id, play_id, yards_gained)])
+  player_on_plays <- run_def_long[, .(on_play = TRUE), by = .(gsis_id, game_id, play_id)]
+  
+  ypc_diff_dt <- rbindlist(lapply(all_players, function(player_id) {
+    joined <- merge(run_play_ids, player_on_plays[gsis_id == player_id], 
+                    by = c("game_id", "play_id"), all.x = TRUE)
+    joined[is.na(on_play), on_play := FALSE]
+    snaps_on <- sum(joined$on_play)
+    if (snaps_on < 100) return(NULL)
+    ypc_on <- joined[on_play == TRUE, mean(yards_gained, na.rm = TRUE)]
+    ypc_off <- joined[on_play == FALSE, mean(yards_gained, na.rm = TRUE)]
+    list(gsis_id = player_id,
+         ypc_on = ypc_on,
+         ypc_off = ypc_off,
+         ypc_diff = ypc_on - ypc_off)
+  }))
+  
+  disruption_summary <- merge(disruption_summary, ypc_diff_dt[, .(gsis_id, ypc_diff)], by = "gsis_id", all.x = TRUE)
+  
+  rosters <- tryCatch({
+    setDT(load_rosters(unique(data_season$season)))[, .(gsis_id, full_name, position, team)]
+  }, error = function(e) {
+    cat("Warning: Could not load roster data.\n")
+    data.table()
+  })
+  
+  disruption_summary <- merge(disruption_summary, rosters, by = "gsis_id", all.x = TRUE)
+  
+  pass_rusher_positions <- c("DE", "DT", "EDGE", "OLB", "ILB", "LB", "NT", "DL")
+  disruption_summary <- disruption_summary[position %in% pass_rusher_positions]
+  disruption_summary <- disruption_summary[raw_pass_rush_snaps >= 100]
+  
+  setorder(disruption_summary, -disruption_rate)
+  
+  disruption_summary[, .(
+    Player = full_name,
+    Team = team,
+    Position = position,
+    Weighted_Sacks = round(weighted_sacks, 3),
+    Weighted_QB_Hits = round(weighted_qb_hits, 3),
+    Pass_Rush_Snaps = raw_pass_rush_snaps,
+    Weighted_Pass_Rush_Snaps = round(weighted_pass_rush_snaps, 3),
+    Disruption_Rate = round(disruption_rate, 4),
+    Raw_Disruption_Rate = round(raw_disruption_rate, 4),
+    Disruption_Rate_Diff = round(disruption_rate_diff, 4),
+    YPC_Diff = round(ypc_diff, 3),
+    Avg_Run = round(avg_run_prob, 5)
+  )]
+}
+
+for (yr in 2022) {
+  cat("\n=== Surprisal-Weighted Pass Rushers for Season", yr, "===\n")
+  season_data <- df_base[season == yr & week >= 1 & week <= 9]
+  res <- evaluate_pass_rushers(season_data)
+  print(head(res, 30))
+}
+
+library(ggplot2)
+library(ggrepel)
+library(viridis)
+
+# Filter top 30 by Pass Rush Snaps
+top50v1 <- res[!is.na(YPC_Diff)][order(-Raw_Disruption_Rate)][1:50]
+
+ggplot(top50v1, aes(x = YPC_Diff, y = Raw_Disruption_Rate, color = Pass_Rush_Snaps)) +
+  geom_point(size = 3, alpha = 0.85) +
+  geom_text_repel(aes(label = Player), size = 4.5, max.overlaps = 100) +
+  scale_color_viridis_c(option = "D", direction = 1, name = "Pass Rush Snaps") +
+  labs(
+    title = "Top 50 Pass Rushers by Raw Disruption Rate",
+    x = "Yards Per Carry Allowed (On - Off Field)",
+    y = "Disruption Rate",
+    caption = "2023 season | Must have ≥ 100 pass rush snaps and ≥ 100 run defense snaps"
+  ) +
+  theme_minimal(base_size = 14)
+
+top50v2 <- res[!is.na(YPC_Diff)][order(-Disruption_Rate)][1:50]
+
+ggplot(top50v2, aes(x = YPC_Diff, y = Disruption_Rate, color = Pass_Rush_Snaps)) +
+  geom_point(size = 3, alpha = 0.85) +
+  geom_text_repel(aes(label = Player), size = 4.5, max.overlaps = 100) +
+  scale_color_viridis_c(option = "D", direction = 1, name = "Pass Rush Snaps") +
+  labs(
+    title = "Top 50 Pass Rushers by Weighted Disruption Rate",
+    x = "Yards Per Carry Allowed (On - Off Field)",
+    y = "Disruption Rate",
+    caption = "2023 season | Must have ≥ 100 pass rush snaps and ≥ 100 run defense snaps"
+  ) +
+  theme_minimal(base_size = 14)
+
+top50v3 <- res[!is.na(YPC_Diff)][order(-Disruption_Rate_Diff)][1:50]
+
+ggplot(top50v3, aes(x = YPC_Diff, y = Disruption_Rate_Diff, color = Pass_Rush_Snaps)) +
+  geom_point(size = 3, alpha = 0.85) +
+  geom_text_repel(aes(label = Player), size = 4.5, max.overlaps = 100) +
+  scale_color_viridis_c(option = "D", direction = 1, name = "Pass Rush Snaps") +
+  labs(
+    title = "Top 50 Pass Rushers by Disruption Rate Difference",
+    x = "Yards Per Carry Allowed (On - Off Field)",
+    y = "Disruption Rate Residual",
+    caption = "2023 season | Must have ≥ 100 pass rush snaps and ≥ 100 run defense snaps"
+  ) +
+  theme_minimal(base_size = 14)
+
+top50v3 <- res[!is.na(YPC_Diff)][order(Disruption_Rate_Diff)][1:50]
+
+ggplot(top50v3, aes(x = YPC_Diff, y = Disruption_Rate_Diff, color = Pass_Rush_Snaps)) +
+  geom_point(size = 3, alpha = 0.85) +
+  geom_text_repel(aes(label = Player), size = 4.5, max.overlaps = 100) +
+  scale_color_viridis_c(option = "D", direction = 1, name = "Pass Rush Snaps") +
+  labs(
+    title = "Top 50 Pass Rushers by Disruption Rate Difference",
+    x = "Yards Per Carry Allowed (On - Off Field)",
+    y = "Disruption Rate Residual",
+    caption = "2023 season | Must have ≥ 100 pass rush snaps and ≥ 100 run defense snaps"
+  ) +
+  theme_minimal(base_size = 14)
+
+top50v5 <- res[!is.na(YPC_Diff)][order(-Disruption_Rate)]#[1:50]
+
+# Step 1: Fit linear model
+lm_fit <- lm(Raw_Disruption_Rate ~ Avg_Run, data = top50v5)
+
+# Step 2: Predict fitted values
+top50v5$fitted <- predict(lm_fit)
+
+# Step 3: Compute vertical distance from each point to the line
+top50v5$residual <- top50v5$Raw_Disruption_Rate - top50v5$fitted
+
+top_rows <- order(-top50v5$residual)[1:15]  # largest positive residuals
+top50v5[, label_flag := FALSE]
+top50v5[top_rows, label_flag := TRUE]
+
+ggplot(top50v5, aes(x = Avg_Run, y = Raw_Disruption_Rate, color = Pass_Rush_Snaps)) +
+  geom_point(alpha = 0.85) +
+  geom_text_repel(
+    data = top50v5[label_flag == TRUE],
+    aes(label = Player),
+    size = 4.5,
+    max.overlaps = Inf
+  ) +
+  geom_smooth(method = "lm", se = TRUE, color = "black", linetype = "dashed", size = 1.2) +
+  scale_color_viridis_c(option = "D", direction = 1, name = "Total Snaps") +
+  labs(
+    title = "Disruption Rate Decreases with Average Run %",
+    x = "Average Run %",
+    y = "Raw Disruption Rate"
+  ) +
+  theme_minimal(base_size = 14)
 
