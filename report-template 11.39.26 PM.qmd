@@ -1,9 +1,8 @@
 ---
-title: "Title"
+title: "Predicting Plays, Revaluing Rushers"
 author:
-  - Author 1
-  - Author 2
-  - Author 3
+  - Verity Nwabuisi
+  - Cale Latimer
 date: "July 25, 2025"
 toc: true
 format:
@@ -21,23 +20,78 @@ execute:
 
 ## Introduction 
 
-Describe the problem and why it is important.
+In the NFL, the ability to anticipate whether the offense will run or pass is critical to defensive success. Games are often decided not just by athletic execution but by preparation and strategic decision-making. Defensive coordinators must rely on context — such as down, distance, and formation — to make informed calls before the snap.
+
+This project has two primary goals:
+
+1. To build a predictive model that estimates the likelihood of a run or pass based solely on pre-snap context.
+
+2. To use this model to evaluate pass rushers by measuring their ability to generate pressure in unexpected passing situations, where disruption is more difficult and potentially more valuable.
+
+By combining predictive modeling with defensive evaluation, we aim to provide a more nuanced view of both offensive tendencies and defensive impact.
 
 ## Data
 
-Describe the data you’re using in detail, where you accessed it, along with relevant exploratory data analysis (EDA). You should also include descriptions of any relevant data pre-processing steps (e.g., whether you consider specific observations, create any meaningful features, etc.---but don't mention minor steps like column type conversion, filtering out unnecessary rows)
+This project draws on two primary sources of data. The first is NFL play-by-play data from the 2016–2023 seasons, which includes contextual features such as down, distance, quarter, yardline, score differential, time remaining, offensive formation, and a team-specific lagged run rate. These features form the basis for our pre-snap prediction model.
+
+The second source is NFL player tracking data from the 2022 season. This dataset provides frame-by-frame spatial coordinates $(x,y)$ for all players and the football, along with derived attributes such as speed, acceleration, direction, and tagged events (e.g., ball_snap, pass_release, tackle). This allows us to identify when and where pass rushers generate disruption.
+
+To evaluate defenders, we introduce a surprisal-based metric. Surprisal is defined as the negative logarithm of the model-assigned probability of the observed event:
+
+* For pass plays: $-\log(P(\text{pass}))$
+
+* For run plays: $-\log(1 - P(\text{pass}))$
+
+Higher surprisal values correspond to more unexpected (and thus harder to anticipate) plays. A pass rusher’s score is calculated by summing the surprisal values of the plays on which they record a sack or quarterback hit. The final evaluation metric is a rate:
+
+$\text{Surprisal-weighted disruption rate} = \dfrac{\text{Weighted sacks + weighted QB hits}}{\text{Total surprisal on pass plays}}$
+
+This approach rewards defenders who make high-impact plays in situations where pressure is least expected.
 
 ## Methods
 
-Describe the modeling techniques you chose, their assumptions, justifications for why they are appropriate for the problem, and how you're comparing/evaluating the different methods.
+We built a three-stage modeling pipeline, each step adding football-specific context:
+
+* Stage 1: Baseline Model
+Used game-level features (down, distance, score, time). Trained with XGBoost for speed and pattern recognition. Accuracy: ~70%.
+
+* Stage 2: Formation-Aware Model
+Added team and alignment data to capture offensive tendencies. Still used XGBoost due to its adaptability to new features.
+
+* Stage 3: Tracking Model
+Integrated player locations, motion, and spacing. Switched to Generalized Additive Models (GAMs) to model smooth spatial patterns. Improved accuracy by 5–10%.
+
+We used these models to compute surprisal—how unexpected each play call was—to contextualize defensive disruption.
 
 ## Results
 
-Describe your results. This can include tables and plots showing your results, as well as text describing how your models worked and the appropriate interpretations of the relevant output. (Note: Don’t just write out the textbook interpretations of all model coefficients. Instead, interpret the output that is relevant for your question of interest that is framed in the introduction)
+To evaluate pass rusher performance, we used two key metrics derived from our predictive models:
+
+* Raw Disruption Rate: The proportion of plays on which a defender generated pressure, regardless of context.
+
+* Surprisal-Weighted Disruption: The average surprisal score (i.e., how unexpected a pass was) on plays where the defender created pressure. This metric highlights defenders who consistently win in difficult, non-obvious passing situations.
+
+By combining these two views, we identified players who not only disrupt frequently, but do so when offenses are least predictable — a more nuanced measure of effectiveness than raw pressure alone.
 
 ## Discussion
 
-Give your conclusions and summarize what you have learned with regards to your question of interest. Are there any limitations with the approaches you used? What do you think are the next steps to follow-up your project?
+Our surprisal-adjusted disruption metric revealed valuable insight into defensive performance. By weighting pressures by how unexpected the pass was, we surfaced under-the-radar contributors — such as Dorance Armstrong and Rasheem Green — whose impact is often obscured in traditional metrics. Conversely, some high-profile players appeared less effective once favorable context was removed.
+
+**Limitations:**
+
+* Identity-Blind Modeling: Our model does not account for team-specific characteristics, coaching tendencies, or individual player skill — treating all plays as contextually independent.
+
+* Limited Time Scope: Our analysis only covers the first nine weeks of the 2022 NFL season, limiting the generalizability of the results.
+
+* Single-Frame Context: The model relies exclusively on pre-snap context and does not incorporate post-snap dynamics, such as route development, quarterback scrambles, or run-pass option (RPO) reads.
+
+**Next Steps**
+
+To address these gaps and enhance the model’s realism, we propose several future directions:
+
+* Talent Awareness: Integrate player grades, coaching styles, and in-game fatigue to make predictions more sensitive to actual personnel.
+
+* Richer Pass-Rush Context: Extend the disruption evaluation by factoring in offensive line quality, slide protections, and the frequency of double teams.
 
 ## Appendix: A quick tutorial
 
