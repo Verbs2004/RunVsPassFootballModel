@@ -1,0 +1,196 @@
+---
+title: "Predicting Plays, Revaluing Rushers"
+author:
+  - Verity Nwabuisi
+  - Cale Latimer
+date: "July 25, 2025"
+toc: true
+format:
+  html:
+    theme: cosmo
+    html-math-method: katex
+    self-contained: true
+execute:
+  echo: false
+  warning: false
+  message: false
+---
+
+---
+
+## Introduction 
+
+In the NFL, the ability to anticipate whether the offense will run or pass is critical to defensive success. Games are often decided not just by athletic execution but by preparation and strategic decision-making. Defensive coordinators must rely on context — such as down, distance, and formation — to make informed calls before the snap.
+
+This project has two primary goals:
+
+1. To build a predictive model that estimates the likelihood of a run or pass based solely on pre-snap context.
+
+2. To use this model to evaluate pass rushers by measuring their ability to generate pressure in unexpected passing situations, where disruption is more difficult and potentially more valuable.
+
+By combining predictive modeling with defensive evaluation, we aim to provide a more nuanced view of both offensive tendencies and defensive impact.
+
+## Data
+
+This project draws on two primary sources of data. The first is NFL play-by-play data from the 2016–2023 seasons, which includes contextual features such as down, distance, quarter, yardline, score differential, time remaining, offensive formation, and a team-specific lagged run rate. These features form the basis for our pre-snap prediction model.
+
+The second source is NFL player tracking data from the 2022 season. This dataset provides frame-by-frame spatial coordinates $(x,y)$ for all players and the football, along with derived attributes such as speed, acceleration, direction, and tagged events (e.g., ball_snap, pass_release, tackle). This allows us to identify when and where pass rushers generate disruption.
+
+To evaluate defenders, we introduce a surprisal-based metric. Surprisal is defined as the negative logarithm of the model-assigned probability of the observed event:
+
+* For pass plays: $-\log(P(\text{pass}))$
+
+* For run plays: $-\log(1 - P(\text{pass}))$
+
+Higher surprisal values correspond to more unexpected (and thus harder to anticipate) plays. A pass rusher’s score is calculated by summing the surprisal values of the plays on which they record a sack or quarterback hit. The final evaluation metric is a rate:
+
+$\text{Surprisal-weighted disruption rate} = \dfrac{\text{Weighted sacks + weighted QB hits}}{\text{Total surprisal on pass plays}}$
+
+This approach rewards defenders who make high-impact plays in situations where pressure is least expected.
+
+## Methods
+
+We built a three-stage modeling pipeline, each step adding football-specific context:
+
+* Stage 1: Baseline Model
+Used game-level features (down, distance, score, time). Trained with XGBoost for speed and pattern recognition. Accuracy: ~70%.
+
+* Stage 2: Formation-Aware Model
+Added team and alignment data to capture offensive tendencies. Still used XGBoost due to its adaptability to new features.
+
+* Stage 3: Tracking Model
+Integrated player locations, motion, and spacing. Switched to Generalized Additive Models (GAMs) to model smooth spatial patterns. Improved accuracy by 5–10%.
+
+We used these models to compute surprisal—how unexpected each play call was—to contextualize defensive disruption.
+
+## Results
+
+To evaluate pass rusher performance, we used two key metrics derived from our predictive models:
+
+* Raw Disruption Rate: The proportion of plays on which a defender generated pressure, regardless of context.
+
+* Surprisal-Weighted Disruption: The average surprisal score (i.e., how unexpected a pass was) on plays where the defender created pressure. This metric highlights defenders who consistently win in difficult, non-obvious passing situations.
+
+By combining these two views, we identified players who not only disrupt frequently, but do so when offenses are least predictable — a more nuanced measure of effectiveness than raw pressure alone.
+
+## Discussion
+
+Our surprisal-adjusted disruption metric revealed valuable insight into defensive performance. By weighting pressures by how unexpected the pass was, we surfaced under-the-radar contributors — such as Dorance Armstrong and Rasheem Green — whose impact is often obscured in traditional metrics. Conversely, some high-profile players appeared less effective once favorable context was removed.
+
+**Limitations:**
+
+* Identity-Blind Modeling: Our model does not account for team-specific characteristics, coaching tendencies, or individual player skill — treating all plays as contextually independent.
+
+* Limited Time Scope: Our analysis only covers the first nine weeks of the 2022 NFL season, limiting the generalizability of the results.
+
+* Single-Frame Context: The model relies exclusively on pre-snap context and does not incorporate post-snap dynamics, such as route development, quarterback scrambles, or run-pass option (RPO) reads.
+
+**Next Steps**
+
+To address these gaps and enhance the model’s realism, we propose several future directions:
+
+* Talent Awareness: Integrate player grades, coaching styles, and in-game fatigue to make predictions more sensitive to actual personnel.
+
+* Richer Pass-Rush Context: Extend the disruption evaluation by factoring in offensive line quality, slide protections, and the frequency of double teams.
+
+## Appendix: A quick tutorial
+
+**(Feel free to remove this section when you submit)**
+
+This a Quarto document. 
+To learn more about Quarto see <https://quarto.org>.
+You can use the Render button to see what it looks like in HTML.
+
+### Text formatting
+
+Text can be bolded with **double asterisks** and italicized with *single asterisks*. 
+Monospace text, such as for short code snippets, uses `backticks`.
+(Note these are different from quotation marks or apostrophes.) Links are
+written [like this](http://example.com/).
+
+Bulleted lists can be written with asterisks:
+
+* Each item starts on a new line with an asterisk.
+* Items should start on the beginning of the line.
+* Leave blank lines after the end of the list so the list does not continue.
+
+Mathematics can be written with LaTeX syntax using dollar signs. 
+For instance, using single dollar signs we can write inline math: $(-b \pm \sqrt{b^2 - 4ac})/2a$.
+
+To write math in "display style", i.e. displayed on its own line centered on the
+page, we use double dollar signs:
+$$
+x^2 + y^2 = 1
+$$
+
+
+### Code blocks
+
+Code blocks are evaluated sequentially when you hit Render. 
+As the code runs, `R` prints out which block is running, so naming blocks is useful if you want to know which one takes a long time. 
+After the block name, you can specify [chunk options](https://yihui.org/knitr/options/). 
+For example, `echo` controls whether the code is printed in the document. 
+By default, output is printed in the document in monospace:
+
+```{r, echo = FALSE}
+head(mtcars)
+```
+
+Chunk options can also be written inside the code block, which is helpful for really long options, as we'll see soon.
+
+```{r}
+#| echo: false
+head(mtcars)
+```
+
+### Figures
+
+If a code block produces a plot or figure, this figure will automatically be inserted inline in the report. That is, it will be inserted exactly where the code block is.
+
+```{r}
+#| fig-width: 5
+#| fig-height: 3.5
+#| fig-cap: "This is a caption. It should explain what's in the figure and what's interesting about it. For instance: There is a negative, strong linear correlation between miles per gallon and horsepower for US cars in the 1970s."
+
+library(tidyverse)
+mtcars |> 
+  ggplot(aes(x = mpg, y = hp)) +
+  geom_point() +
+  labs(x = "Miles per gallon",
+       y = "Horsepower")
+```
+
+Notice the use of `fig-width` and `fig-height` to control the figure's size (in inches). 
+These control the sizes given to `R` when it generates the plot, so `R` proportionally adjusts the font sizes to be large enough.
+
+### Tables
+
+Use the `knitr::kable()` function to print tables as HTML:
+
+```{r}
+mtcars |> 
+  slice(1:5) |> 
+  knitr::kable()
+```
+
+We can summarize model results with a table. 
+For instance, suppose we fit a linear regression model:
+
+```{r}
+#| echo: true
+model1 <- lm(mpg ~ disp + hp + drat, data = mtcars)
+```
+
+It is *not* appropriate to simply print `summary(model1)` into the report. 
+If we want the reader to understand what models we have fit and what their results are, we should provide a nicely formatted table. 
+A simple option is to use the `tidy()` function from the `broom` package to get a data frame of the model fit, and simply report that as a table.
+
+```{r }
+#| results: "asis"
+#| tbl-cap: "Predicting fuel economy using vehicle features."
+library(broom)
+model1 |> 
+  tidy() |>
+  knitr::kable(digits = 2,
+               col.names = c("Term", "Estimate", "SE", "t", "p"))
+```
